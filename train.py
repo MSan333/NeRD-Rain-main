@@ -1,7 +1,7 @@
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 import torch
 
@@ -39,9 +39,9 @@ start_epoch = 1
 
 parser = argparse.ArgumentParser(description='Image Deraininig')
 
-parser.add_argument('--train_dir', default='./Datasets/Rain200L/train/', type=str, help='Directory of train images')
-parser.add_argument('--val_dir', default='./Datasets/Rain200L/test/', type=str, help='Directory of validation images')
-parser.add_argument('--model_save_dir', default='./checkpoints/', type=str, help='Path to save weights')
+parser.add_argument('--train_dir', default='../data/Rain200L/train/', type=str, help='Directory of train images')
+parser.add_argument('--val_dir', default='../data/Rain200L/test/', type=str, help='Directory of validation images')
+parser.add_argument('--model_save_dir', default='./change1/checkpoints/', type=str, help='Path to save weights')
 parser.add_argument('--pretrain_weights', default='', type=str, help='Path to pretrain-weights')
 parser.add_argument('--mode', default='Deraininig', type=str)
 parser.add_argument('--session', default='Multiscale', type=str, help='session')
