@@ -158,6 +158,41 @@ class RFM(nn.Module):
         return x_freq + x_spatial
 
 
+class MDPConv(nn.Module):
+    """Multi-Direction Perception Convolution (MDPConv)
+
+    参考 DeRainMamba (IEEE SPL 2025) 公式(4):
+    F_out = sum(F_in * K_i) for i=1..5
+
+    5个方向微分卷积核 (均为 depthwise, groups=dim):
+      - HDC: 水平方向 (1x3)
+      - VC:  竖直方向 (3x1)
+      - CDC: 中心差分 (3x3)
+      - ADC: 对角线方向 (3x3)
+      - VDC: 反对角线方向 (3x3)
+    输出: 5个分支求和 → 1x1 Conv 投影
+    """
+    def __init__(self, dim):
+        super(MDPConv, self).__init__()
+        # 水平微分 1x3
+        self.hdc = nn.Conv2d(dim, dim, kernel_size=(1, 3), padding=(0, 1), groups=dim, bias=False)
+        # 竖直微分 3x1
+        self.vc = nn.Conv2d(dim, dim, kernel_size=(3, 1), padding=(1, 0), groups=dim, bias=False)
+        # 中心差分 3x3
+        self.cdc = nn.Conv2d(dim, dim, kernel_size=3, padding=1, groups=dim, bias=False)
+        # 对角线 3x3
+        self.adc = nn.Conv2d(dim, dim, kernel_size=3, padding=1, groups=dim, bias=False)
+        # 反对角线 3x3
+        self.vdc = nn.Conv2d(dim, dim, kernel_size=3, padding=1, groups=dim, bias=False)
+        # 投影
+        self.proj = nn.Conv2d(dim, dim, kernel_size=1)
+
+    def forward(self, x):
+        out = self.hdc(x) + self.vc(x) + self.cdc(x) + self.adc(x) + self.vdc(x)
+        out = self.proj(out)
+        return out
+
+
 class Attention(nn.Module):
     def __init__(self, dim, num_heads, bias, BasicConv=BasicConv):
         super(Attention, self).__init__()
@@ -232,6 +267,34 @@ class RFM_TransformerBlock(nn.Module):
         x = x + self.attn(self.norm1(x))
         x = x + self.ffn(self.norm2(x)) + self.rfm(x)
 
+        return x
+
+
+class MFGCP_TransformerBlock(nn.Module):
+    """TransformerBlock with parallel RFM + MDPConv branches (MFGCP).
+
+    创新点2: 多尺度频域-梯度协同感知模块
+    参考 DeRainMamba (IEEE SPL 2025) 的 FASSM + MDPConv 协同设计
+
+    结构:
+      x = x + attn(norm1(x))
+      x = x + ffn(norm2(x)) + rfm(x) + alpha * mdpconv(x)
+    其中 alpha 为可学习标量，初始化为 0.1
+    """
+
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type, BasicConv=BasicConv):
+        super(MFGCP_TransformerBlock, self).__init__()
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
+        self.attn = Attention(dim, num_heads, bias, BasicConv=BasicConv)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
+        self.ffn = FeedForward(dim, ffn_expansion_factor, bias, BasicConv=BasicConv)
+        self.rfm = RFM(dim)
+        self.mdpconv = MDPConv(dim)
+        self.alpha = nn.Parameter(torch.tensor(0.1))  # 可学习融合权重，初始化0.1
+
+    def forward(self, x):
+        x = x + self.attn(self.norm1(x))
+        x = x + self.ffn(self.norm2(x)) + self.rfm(x) + self.alpha * self.mdpconv(x)
         return x
 
 
@@ -325,7 +388,7 @@ class MultiscaleNet(nn.Module):
 
         self.down2_3_small = Downsample(int(dim * 2 ** 1))
         self.latent_small = nn.Sequential(*[
-            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_small = Upsample(int(dim * 2 ** 2))
@@ -366,10 +429,10 @@ class MultiscaleNet(nn.Module):
         self.down2_3_mid = Downsample(int(dim * 2 ** 1))
         self.down2_3_mid2 = Downsample(int(dim * 2 ** 1))
         self.latent_mid1 = nn.Sequential(*[
-            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_mid2 = nn.Sequential(*[
-            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_mid = Upsample(int(dim * 2 ** 2))
@@ -428,13 +491,13 @@ class MultiscaleNet(nn.Module):
         self.down2_3_max2 = Downsample(int(dim * 2 ** 1))
         self.down2_3_max3 = Downsample(int(dim * 2 ** 1))
         self.latent_max1 = nn.Sequential(*[
-            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_max2 = nn.Sequential(*[
-            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_max3 = nn.Sequential(*[
-            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_max = Upsample(int(dim * 2 ** 2))

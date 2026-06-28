@@ -1,0 +1,36 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+branch: local/exp1
+exported_at: "2026-06-28T15:23:21Z"
+modules:
+    "":
+        dir_name: NeRD-Rain 图像去雨模型训练与评估
+        title: NeRD-Rain 图像去雨模型训练与评估
+        scope:
+            - README.md
+            - requirements.txt
+            - train.py
+            - test.py
+            - test_speed.py
+            - train.sh
+            - img.sh
+            - model.py
+            - model_S.py
+            - layers.py
+            - mlp.py
+            - attssm_modules.py
+            - losses.py
+            - data_RGB.py
+            - dataset_RGB.py
+            - evaluate_python.py
+            - evaluate_y_channel.py
+            - get_parameter_number.py
+            - utils/
+            - Ablations/
+            - evaluations/
+            - pytorch-gradual-warmup-lr/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
