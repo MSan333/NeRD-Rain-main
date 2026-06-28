@@ -26,6 +26,7 @@ from get_parameter_number import get_parameter_number
 import kornia
 from torch.utils.tensorboard import SummaryWriter
 import argparse
+import swanlab
 
 from skimage import img_as_ubyte
 
@@ -50,6 +51,22 @@ parser.add_argument('--num_epochs', default=3000, type=int, help='num_epochs')
 parser.add_argument('--batch_size', default=1, type=int, help='batch_size')
 parser.add_argument('--val_epochs', default=1, type=int, help='val_epochs')
 args = parser.parse_args()
+
+######### SwanLab Init ###########
+swanlab.login(api_key="o4MGQAOSX8rGztH69Jj5P")
+swanlab.init(
+    project="NeRD-Rain",
+    experiment_name=args.session,
+    config={
+        **vars(args),
+        "start_lr": 1e-4,
+        "end_lr": 1e-6,
+        "warmup_epochs": 3,
+        "optimizer": "Adam",
+        "betas": (0.9, 0.999),
+        "eps": 1e-8,
+    },
+)
 
 mode = args.mode
 session = args.sessions
@@ -165,11 +182,20 @@ for epoch in range(start_epoch, num_epochs + 1):
         optimizer.step()
         epoch_loss += loss.item()
         iter += 1
+        swanlab.log({
+            "loss/fft_loss": loss_fft.item(),
+            "loss/char_loss": loss_char.item(),
+            "loss/edge_loss": loss_edge.item(),
+            "loss/l1_loss": loss_l1.item(),
+            "loss/iter_loss": loss.item(),
+            "iter": iter,
+        })
         writer.add_scalar('loss/fft_loss', loss_fft, iter)
         writer.add_scalar('loss/char_loss', loss_char, iter)
         writer.add_scalar('loss/edge_loss', loss_edge, iter)
         writer.add_scalar('loss/l1_loss', loss_l1, iter)
         writer.add_scalar('loss/iter_loss', loss, iter)
+    swanlab.log({"loss/epoch_loss": epoch_loss, "epoch": epoch})
     writer.add_scalar('loss/epoch_loss', epoch_loss, epoch)
     #### Evaluation ####
     if epoch % val_epochs == 0:
@@ -195,6 +221,7 @@ for epoch in range(start_epoch, num_epochs + 1):
                         'optimizer': optimizer.state_dict()
                         }, os.path.join(model_dir, "model_best.pth"))
 
+        swanlab.log({"val/psnr": psnr_val_rgb, "val/best_psnr": best_psnr, "epoch": epoch})
         print("[epoch %d PSNR: %.4f --- best_epoch %d Best_PSNR %.4f]" % (epoch, psnr_val_rgb, best_epoch, best_psnr))
 
         torch.save({'epoch': epoch,
@@ -204,10 +231,12 @@ for epoch in range(start_epoch, num_epochs + 1):
 
     scheduler.step()
 
+    current_lr = scheduler.get_lr()[0]
     print("------------------------------------------------------------------")
     print("Epoch: {}\tTime: {:.4f}\tLoss: {:.4f}\tLearningRate {:.6f}".format(epoch, time.time() - epoch_start_time,
-                                                                              epoch_loss, scheduler.get_lr()[0]))
+                                                                              epoch_loss, current_lr))
     print("------------------------------------------------------------------")
+    swanlab.log({"lr": current_lr, "epoch_time": time.time() - epoch_start_time, "epoch": epoch})
 
     torch.save({'epoch': epoch,
                 'state_dict': model_restoration.state_dict(),
@@ -215,3 +244,4 @@ for epoch in range(start_epoch, num_epochs + 1):
                 }, os.path.join(model_dir, "model_latest.pth"))
 
 writer.close()
+swanlab.finish()

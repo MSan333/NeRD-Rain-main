@@ -48,6 +48,7 @@ scikit-image==0.21.0
 scipy==1.10.1
 setuptools==68.0.0
 six==1.16.0
+swanlab
 sympy==1.12
 tensorboard==2.14.0
 tensorboard-data-server==0.7.1
