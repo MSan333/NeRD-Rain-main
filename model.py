@@ -4,11 +4,6 @@ from torch.nn import functional as F
 import numbers
 from einops import rearrange
 from mlp import INR
-# ★ 导入 AttSSM 模块 (本文创新贡献)
-# AttSSMSequential 替换原始的 nn.Sequential(*[TransformerBlock...])
-# 用于 6 个 bottleneck latent 层 (small×1 + mid×2 + max×3)
-# 融合了 C1(S-scan) + C2(通道注意力+跨尺度状态) + C3(频域FFN) 三个创新点
-from attssm_modules import AttSSMSequential
 
 
 def to_3d(x):
@@ -120,6 +115,49 @@ class FeedForward(nn.Module):
         return x
 
 
+class RFM(nn.Module):
+    """
+    Residual Fourier Module (RFM) — 频域残差增强模块。
+
+    参考 DeRainMamba (arXiv:2510.06746, IEEE SPL 2025):
+    Rain200L 消融: baseline 41.13 → +RFM 41.55 (+0.42 dB)
+
+    结构:
+      频域分支: FFT → amplitude/phase 分别 Conv1x1 → 融合 → iFFT → Conv1x1
+      空域残差: DWConv3x3 (增强高频细节)
+      输出: 频域分支 + 空域残差
+    """
+
+    def __init__(self, dim):
+        super(RFM, self).__init__()
+        # 幅度谱: 两层 1x1 Conv + ReLU
+        self.amp_conv1 = nn.Conv2d(dim, dim, kernel_size=1)
+        self.amp_conv2 = nn.Conv2d(dim, dim, kernel_size=1)
+        # 相位谱: 一层 1x1 Conv
+        self.phase_conv = nn.Conv2d(dim, dim, kernel_size=1)
+        # iFFT 后投影
+        self.proj = nn.Conv2d(dim, dim, kernel_size=1)
+        # 空域残差: DWConv3x3
+        self.dwconv = nn.Conv2d(dim, dim, kernel_size=3, stride=1, padding=1, groups=dim)
+
+    def forward(self, x):
+        # 频域分支
+        x_fft = torch.fft.fft2(x, dim=(-2, -1))
+        amp = x_fft.abs()                                    # 幅度谱
+        phase = x_fft.angle()                                # 相位谱
+        amp_refined = F.relu(self.amp_conv2(F.relu(self.amp_conv1(amp))))  # 两层1x1+ReLU
+        phase_refined = self.phase_conv(phase)               # 一层1x1
+        # 融合: 修正后的幅度 + 相位信息 → 作为新幅度，保留原始相位重建
+        x_hat = F.relu(amp_refined + phase_refined)
+        # iFFT: 用 x_hat 作为幅度 + 原始相位重建复数频谱
+        x_complex = x_hat * torch.exp(1j * phase)
+        x_freq = torch.fft.ifft2(x_complex, dim=(-2, -1)).real
+        x_freq = self.proj(x_freq)                           # 1x1投影
+        # 空域残差: DWConv3x3 增强高频细节
+        x_spatial = self.dwconv(x)
+        return x_freq + x_spatial
+
+
 class Attention(nn.Module):
     def __init__(self, dim, num_heads, bias, BasicConv=BasicConv):
         super(Attention, self).__init__()
@@ -166,6 +204,33 @@ class TransformerBlock(nn.Module):
     def forward(self, x):
         x = x + self.attn(self.norm1(x))
         x = x + self.ffn(self.norm2(x))
+
+        return x
+
+
+class RFM_TransformerBlock(nn.Module):
+    """TransformerBlock with parallel RFM branch in bottleneck.
+
+    参考 DeRainMamba (IEEE SPL 2025) FASSM 的设计:
+    F_out = VSSM(LN(x)) + RFM(x) + s·x
+
+    在 NeRD-Rain 中:
+    x = x + attn(norm1(x))
+    x = x + ffn(norm2(x)) + rfm(x)   ← RFM 并行于 FFN
+    """
+
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type, BasicConv=BasicConv):
+        super(RFM_TransformerBlock, self).__init__()
+
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
+        self.attn = Attention(dim, num_heads, bias, BasicConv=BasicConv)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
+        self.ffn = FeedForward(dim, ffn_expansion_factor, bias, BasicConv=BasicConv)
+        self.rfm = RFM(dim)
+
+    def forward(self, x):
+        x = x + self.attn(self.norm1(x))
+        x = x + self.ffn(self.norm2(x)) + self.rfm(x)
 
         return x
 
@@ -247,36 +312,6 @@ class MultiscaleNet(nn.Module):
                  LayerNorm_type='WithBias',
                  ):
         super(MultiscaleNet, self).__init__()
-
-        # ══════════════════════════════════════════════════════════════
-        # ★ 创新改动: AttSSM Bottleneck 层构建辅助函数
-        # ══════════════════════════════════════════════════════════════
-        # 原始代码:
-        #   self.latent_xxx = nn.Sequential(*[
-        #       TransformerBlock(dim=latent_dim, num_heads=heads[2], ...)
-        #       for _ in range(num_blocks[2])
-        #   ])
-        #
-        # 替换为:
-        #   self.latent_xxx = AttSSMSequential(dim=latent_dim, num_blocks=n)
-        #
-        # 替换理由:
-        #   1. Mamba SSM 的 O(N) 复杂度 vs Transformer 的 O(N²)
-        #   2. S 形扫描保持 2D 空间局部性 (C1)
-        #   3. 通道注意力解决像素欠激活 (C2)
-        #   4. 频域增强 FFN 更好地恢复高频细节 (C3)
-        #   5. 跨尺度状态传递利用多尺度架构的信息流 (C2, 原创)
-        #
-        # 仅替换 bottleneck 层, encoder/decoder 层保持原始 TransformerBlock
-        # ══════════════════════════════════════════════════════════════
-        latent_dim = int(dim * 2 ** 2)  # = 48 × 4 = 192 (bottleneck 通道数)
-        def make_attssm_latent(n):
-            """构建 n 个 AttSSMBlock 的序列容器 (替换 TransformerBlock 序列)"""
-            return AttSSMSequential(
-                dim=latent_dim, num_blocks=n,
-                ffn_expansion_factor=ffn_expansion_factor,
-                bias=bias, LayerNorm_type=LayerNorm_type,
-            )
         self.patch_embed_small = OverlapPatchEmbed(inp_channels, dim)
 
         self.encoder_level1_small = nn.Sequential(*[
@@ -289,8 +324,9 @@ class MultiscaleNet(nn.Module):
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[1])])
 
         self.down2_3_small = Downsample(int(dim * 2 ** 1))
-        # ★ AttSSM bottleneck (替换原始 TransformerBlock)
-        self.latent_small = make_attssm_latent(num_blocks[2])
+        self.latent_small = nn.Sequential(*[
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_small = Upsample(int(dim * 2 ** 2))
         self.reduce_chan_level2_small = nn.Conv2d(int(dim * 2 ** 2), int(dim * 2 ** 1), kernel_size=1, bias=bias)
@@ -329,9 +365,12 @@ class MultiscaleNet(nn.Module):
 
         self.down2_3_mid = Downsample(int(dim * 2 ** 1))
         self.down2_3_mid2 = Downsample(int(dim * 2 ** 1))
-        # ★ AttSSM bottleneck (替换原始 TransformerBlock)
-        self.latent_mid1 = make_attssm_latent(num_blocks[2])
-        self.latent_mid2 = make_attssm_latent(num_blocks[2])
+        self.latent_mid1 = nn.Sequential(*[
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
+        self.latent_mid2 = nn.Sequential(*[
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_mid = Upsample(int(dim * 2 ** 2))
         self.up3_2_mid2 = Upsample(int(dim * 2 ** 2))
@@ -388,10 +427,15 @@ class MultiscaleNet(nn.Module):
         self.down2_3_max = Downsample(int(dim * 2 ** 1))
         self.down2_3_max2 = Downsample(int(dim * 2 ** 1))
         self.down2_3_max3 = Downsample(int(dim * 2 ** 1))
-        # ★ AttSSM bottleneck (替换原始 TransformerBlock)
-        self.latent_max1 = make_attssm_latent(num_blocks[2])
-        self.latent_max2 = make_attssm_latent(num_blocks[2])
-        self.latent_max3 = make_attssm_latent(num_blocks[2])
+        self.latent_max1 = nn.Sequential(*[
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
+        self.latent_max2 = nn.Sequential(*[
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
+        self.latent_max3 = nn.Sequential(*[
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+                             bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_max = Upsample(int(dim * 2 ** 2))
         self.up3_2_max2 = Upsample(int(dim * 2 ** 2))
@@ -429,30 +473,6 @@ class MultiscaleNet(nn.Module):
         self.output_max_context1 = nn.Conv2d(int(dim * 1 ** 1), dim, kernel_size=3, stride=1, padding=1, bias=bias)
         self.output_max_context2 = nn.Conv2d(int(dim * 1 ** 1), dim, kernel_size=3, stride=1, padding=1, bias=bias)
 
-        # ══════════════════════════════════════════════════════════════
-        # ★ C2 原创贡献: 跨尺度状态传递投影层
-        # ══════════════════════════════════════════════════════════════
-        # SSM 的隐状态天然携带了序列的全局摘要信息。
-        # NeRD-Rain 的 small→mid→max 三尺度架构提供了从低分辨率到
-        # 高分辨率的渐进处理流程。我们利用 SSM 状态来在尺度间
-        # 传递全局结构信息:
-        #
-        #   state_small (192-d) → Linear → 注入到 mid 尺度的 Mamba 输入
-        #   state_mid   (192-d) → Linear → 注入到 max 尺度的 Mamba 输入
-        #
-        # Linear 投影的作用:
-        #   不同尺度的特征空间可能有差异 (虽然通道数相同),
-        #   Linear 投影将上一尺度的状态映射到当前尺度的特征空间。
-        #   使用无偏置的 Linear 保持轻量级。
-        #
-        # 这是本文的原创设计, 利用了:
-        #   (a) SSM 的状态传递特性 (天然适合序列间信息传递)
-        #   (b) NeRD-Rain 的多尺度级联架构 (提供了传递通道)
-        # 在现有文献 (MaIR, MambaIRv2, EVSSM) 中均未见此设计。
-        # ══════════════════════════════════════════════════════════════
-        self.state_small2mid = nn.Linear(latent_dim, latent_dim, bias=False)
-        self.state_mid2max = nn.Linear(latent_dim, latent_dim, bias=False)
-
         self.BF1 = Fusion(dim * 4)
         self.BF2 = Fusion(dim * 4)
         self.BF3 = Fusion(dim * 4)
@@ -477,10 +497,7 @@ class MultiscaleNet(nn.Module):
         out_enc_level2_small = self.encoder_level2_small(inp_enc_level2_small)
 
         inp_enc_level4_small = self.down2_3_small(out_enc_level2_small)
-        # ★ AttSSM bottleneck: 返回 (feature, state)
-        # small 尺度是第一个处理的，没有上一尺度的状态，prev_state=None
-        # ssm_state_small 是全局平均池化的 (B, 192) 向量，将传递给 mid 尺度
-        latent_small, ssm_state_small = self.latent_small(inp_enc_level4_small, prev_state=None)
+        latent_small = self.latent_small(inp_enc_level4_small)
         latent_small_mid = self.upsmall2mid1(latent_small)
         latent_small_mid = self.upsmall2mid2(latent_small_mid)
 
@@ -500,11 +517,7 @@ class MultiscaleNet(nn.Module):
         out_enc_level2_mid = self.encoder_level2_mid1(inp_enc_level2_mid)
 
         inp_enc_level4_mid = self.down2_3_mid(out_enc_level2_mid)
-        # ★ C2 跨尺度状态传递: small → mid
-        # ssm_state_small (B,192) 经过 Linear 投影后注入到 mid 尺度
-        # 效果: mid 尺度的 Mamba SSM 可以利用 small 尺度提取的全局结构信息
-        latent_mid, ssm_state_mid1 = self.latent_mid1(
-            inp_enc_level4_mid, prev_state=self.state_small2mid(ssm_state_small))
+        latent_mid = self.latent_mid1(inp_enc_level4_mid)
         latent_mid_INR_max = self.upmid2max1(latent_mid)
         latent_mid_INR_max = self.upmid2max2(latent_mid_INR_max)
 
@@ -524,13 +537,7 @@ class MultiscaleNet(nn.Module):
         out_enc_level2_max = self.encoder_level2_max1(inp_enc_level2_max)
 
         inp_enc_level4_max = self.down2_3_max(out_enc_level2_max)
-        # ★ C2 跨尺度状态传递: mid → max
-        # ssm_state_mid1 (B,192) 经过 Linear 投影后注入到 max 尺度
-        # 传递链完整: small → mid → max (全局结构信息逐级传递)
-        # 注意: max 的后续迭代 (max2, max3) 不再接收跨尺度状态,
-        #        因为它们处理的是同尺度的 recurrence refinement
-        latent_max, _ = self.latent_max1(
-            inp_enc_level4_max, prev_state=self.state_mid2max(ssm_state_mid1))
+        latent_max = self.latent_max1(inp_enc_level4_max)
         BFF_max_1 = latent_max
 
         inp_dec_level2_max = self.up3_2_max(latent_max)
@@ -550,7 +557,7 @@ class MultiscaleNet(nn.Module):
         out_enc_level2_max = self.encoder_level2_max2(inp_enc_level2_max)
 
         inp_enc_level4_max = self.down2_3_max2(out_enc_level2_max)
-        latent_max, _ = self.latent_max2(inp_enc_level4_max)
+        latent_max = self.latent_max2(inp_enc_level4_max)
         BFF_max_2 = latent_max
 
         inp_dec_level2_max = self.up3_2_max2(latent_max)
@@ -570,7 +577,7 @@ class MultiscaleNet(nn.Module):
         out_enc_level2_max = self.encoder_level2_max3(inp_enc_level2_max)
 
         inp_enc_level4_max = self.down2_3_max3(out_enc_level2_max)
-        latent_max, _ = self.latent_max3(inp_enc_level4_max)
+        latent_max = self.latent_max3(inp_enc_level4_max)
         BFF_max_3 = latent_max
 
         BFF1 = self.BF1(BFF_max_1, BFF_max_2)
@@ -601,7 +608,7 @@ class MultiscaleNet(nn.Module):
         out_enc_level2_mid = self.encoder_level2_mid2(inp_enc_level2_mid)
 
         inp_enc_level4_mid = self.down2_3_mid2(out_enc_level2_mid)
-        latent_mid, _ = self.latent_mid2(inp_enc_level4_mid)
+        latent_mid = self.latent_mid2(inp_enc_level4_mid)
         BFF3_2 = latent_mid
         BFF3 = self.BF3(BFF3_1, BFF3_2)
         BFF3 = F.interpolate(BFF3, scale_factor=0.5)

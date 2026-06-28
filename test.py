@@ -13,16 +13,21 @@ from tqdm import tqdm
 from layers import *
 
 parser = argparse.ArgumentParser(description='Image Deraining')
-parser.add_argument('--input_dir', default='/data0/chenxiang/code/CVPR2024/Datasets/Rain200L/test/input/', type=str, help='Directory of validation images')
-parser.add_argument('--output_dir', default='./results/Rain200L', type=str, help='Directory of validation images')
-parser.add_argument('--weights', default='', type=str, help='Path to weights') 
-parser.add_argument('--gpus', default='0', type=str, help='CUDA_VISIBLE_DEVICES')
+parser.add_argument('--input_dir', default='../data/Rain200L/test/input/', type=str, help='Directory of validation images')
+parser.add_argument('--output_dir', default='./evaluations/Evalution_Rain200L_Rain200H_SPA-Data/results/Rain200L', type=str, help='Directory of validation images')
+parser.add_argument('--weights', default='./change2/checkpoints/Deraininig/models/Multiscale/model_best.pth', type=str, help='Path to weights')
+parser.add_argument('--gpus', default='3', type=str, help='CUDA_VISIBLE_DEVICES')
 parser.add_argument('--win_size', default=256, type=int, help='window size')
 args = parser.parse_args()
 result_dir = args.output_dir
 win = args.win_size
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
+
+if not os.path.exists(args.weights):
+    print(f"错误: 没有找到ckpt文件: {args.weights}")
+    exit(1)
+
 model_restoration = mynet()
 get_parameter_number(model_restoration)
 utils.load_checkpoint(model_restoration, args.weights)

@@ -41,7 +41,7 @@ parser = argparse.ArgumentParser(description='Image Deraininig')
 
 parser.add_argument('--train_dir', default='../data/Rain200L/train/', type=str, help='Directory of train images')
 parser.add_argument('--val_dir', default='../data/Rain200L/test/', type=str, help='Directory of validation images')
-parser.add_argument('--model_save_dir', default='./change1/checkpoints/', type=str, help='Path to save weights')
+parser.add_argument('--model_save_dir', default='./change2/checkpoints/', type=str, help='Path to save weights')
 parser.add_argument('--pretrain_weights', default='', type=str, help='Path to pretrain-weights')
 parser.add_argument('--mode', default='Deraininig', type=str)
 parser.add_argument('--session', default='Multiscale', type=str, help='session')
@@ -52,7 +52,7 @@ parser.add_argument('--val_epochs', default=1, type=int, help='val_epochs')
 args = parser.parse_args()
 
 mode = args.mode
-session = args.session
+session = args.sessions
 patch_size = args.patch_size
 
 model_dir = os.path.join(args.model_save_dir, mode, 'models', session)
@@ -87,7 +87,7 @@ warmup_epochs = 3
 scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs - warmup_epochs, eta_min=end_lr)
 scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=warmup_epochs, after_scheduler=scheduler_cosine)
 
-RESUME = False
+RESUME = True
 Pretrain = False
 model_pre_dir = ''
 
@@ -95,7 +95,7 @@ model_pre_dir = ''
 if Pretrain:
     utils.load_checkpoint(model_restoration, model_pre_dir)
 
-    print('------------------------------------------------------------------------------')
+    print('------------------------------------------------------------  ------------------')
     print("==> Retrain Training with: " + model_pre_dir)
     print('------------------------------------------------------------------------------')
 
