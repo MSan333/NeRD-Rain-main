@@ -6,6 +6,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import torch
 
 torch.backends.cudnn.benchmark = True
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 import torch.nn as nn
 import torch.optim as optim
@@ -25,7 +27,9 @@ from tqdm import tqdm
 from get_parameter_number import get_parameter_number
 import kornia
 from torch.utils.tensorboard import SummaryWriter
+from torch.amp import autocast, GradScaler
 import argparse
+import swanlab
 
 from skimage import img_as_ubyte
 
@@ -47,9 +51,26 @@ parser.add_argument('--mode', default='Deraininig', type=str)
 parser.add_argument('--session', default='Multiscale', type=str, help='session')
 parser.add_argument('--patch_size', default=256, type=int, help='patch size')
 parser.add_argument('--num_epochs', default=3000, type=int, help='num_epochs')
-parser.add_argument('--batch_size', default=1, type=int, help='batch_size')
+parser.add_argument('--batch_size', default=4, type=int, help='batch_size')
 parser.add_argument('--val_epochs', default=1, type=int, help='val_epochs')
 args = parser.parse_args()
+
+######### SwanLab Init ###########
+swanlab.login(api_key="o4MGQAOSX8rGztH69Jj5P")
+swanlab.init(
+    project="NeRD-Rain",
+    experiment_name=args.session,
+    config={
+        **vars(args),
+        "start_lr": 4e-4,
+        "end_lr": 4e-6,
+        "warmup_epochs": 3,
+        "optimizer": "Adam",
+        "betas": (0.9, 0.999),
+        "eps": 1e-8,
+        "mixed_precision": "bfloat16",
+    },
+)
 
 mode = args.mode
 session = args.sessions
@@ -65,8 +86,8 @@ num_epochs = args.num_epochs
 batch_size = args.batch_size
 val_epochs = args.val_epochs
 
-start_lr = 1e-4
-end_lr = 1e-6
+start_lr = 4e-4
+end_lr = 4e-6
 
 ######### Model ###########
 model_restoration = myNet()
@@ -124,12 +145,12 @@ criterion_L1 = nn.L1Loss(size_average=True)
 
 ######### DataLoaders ###########
 train_dataset = get_training_data(train_dir, {'patch_size': patch_size})
-train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=False,
-                          pin_memory=True)
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True,
+                          pin_memory=True, persistent_workers=True)
 
 val_dataset = get_validation_data(val_dir, {'patch_size': patch_size})
-val_loader = DataLoader(dataset=val_dataset, batch_size=1, shuffle=False, num_workers=0, drop_last=False,
-                        pin_memory=True)
+val_loader = DataLoader(dataset=val_dataset, batch_size=1, shuffle=False, num_workers=4, drop_last=False,
+                        pin_memory=True, persistent_workers=True)
 
 print('===> Start Epoch {} End Epoch {}'.format(start_epoch, num_epochs + 1))
 print('===> Loading datasets')
@@ -138,6 +159,7 @@ best_psnr = 0
 best_epoch = 0
 writer = SummaryWriter(model_dir)
 iter = 0
+scaler = GradScaler(device_type='cuda')
 
 for epoch in range(start_epoch, num_epochs + 1):
     epoch_start_time = time.time()
@@ -151,33 +173,46 @@ for epoch in range(start_epoch, num_epochs + 1):
         for param in model_restoration.parameters():
             param.grad = None
 
-        target_ = data[0].cuda()
-        input_ = data[1].cuda()
-        target = kornia.geometry.transform.build_pyramid(target_, 3)
-        restored = model_restoration(input_)
+        target_ = data[0].cuda(non_blocking=True)
+        input_ = data[1].cuda(non_blocking=True)
 
-        loss_fft = criterion_fft(restored[0], target[0]) + criterion_fft(restored[1], target[1]) + criterion_fft(restored[2], target[2])
-        loss_char = criterion_char(restored[0], target[0]) + criterion_char(restored[1], target[1]) + criterion_char(restored[2], target[2])
-        loss_edge = criterion_edge(restored[0], target[0]) + criterion_edge(restored[1], target[1]) + criterion_edge(restored[2], target[2])
-        loss_l1 = criterion_L1(restored[3], target[1]) + criterion_L1(restored[5], target[2])
-        loss = loss_char + 0.01 * loss_fft + 0.05 * loss_edge + 0.1 * loss_l1
-        loss.backward()
-        optimizer.step()
+        with autocast(device_type='cuda', dtype=torch.bfloat16):
+            target = kornia.geometry.transform.build_pyramid(target_, 3)
+            restored = model_restoration(input_)
+
+            loss_fft = criterion_fft(restored[0], target[0]) + criterion_fft(restored[1], target[1]) + criterion_fft(restored[2], target[2])
+            loss_char = criterion_char(restored[0], target[0]) + criterion_char(restored[1], target[1]) + criterion_char(restored[2], target[2])
+            loss_edge = criterion_edge(restored[0], target[0]) + criterion_edge(restored[1], target[1]) + criterion_edge(restored[2], target[2])
+            loss_l1 = criterion_L1(restored[3], target[1]) + criterion_L1(restored[5], target[2])
+            loss = loss_char + 0.01 * loss_fft + 0.05 * loss_edge + 0.1 * loss_l1
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
         epoch_loss += loss.item()
         iter += 1
+        swanlab.log({
+            "loss/fft_loss": loss_fft.item(),
+            "loss/char_loss": loss_char.item(),
+            "loss/edge_loss": loss_edge.item(),
+            "loss/l1_loss": loss_l1.item(),
+            "loss/iter_loss": loss.item(),
+            "iter": iter,
+        })
         writer.add_scalar('loss/fft_loss', loss_fft, iter)
         writer.add_scalar('loss/char_loss', loss_char, iter)
         writer.add_scalar('loss/edge_loss', loss_edge, iter)
         writer.add_scalar('loss/l1_loss', loss_l1, iter)
         writer.add_scalar('loss/iter_loss', loss, iter)
+    swanlab.log({"loss/epoch_loss": epoch_loss, "epoch": epoch})
     writer.add_scalar('loss/epoch_loss', epoch_loss, epoch)
     #### Evaluation ####
     if epoch % val_epochs == 0:
         model_restoration.eval()
         psnr_val_rgb = []
         for ii, data_val in enumerate((val_loader), 0):
-            target = data_val[0].cuda()
-            input_ = data_val[1].cuda()
+            target = data_val[0].cuda(non_blocking=True)
+            input_ = data_val[1].cuda(non_blocking=True)
 
             with torch.no_grad():
                 restored = model_restoration(input_)
@@ -195,6 +230,7 @@ for epoch in range(start_epoch, num_epochs + 1):
                         'optimizer': optimizer.state_dict()
                         }, os.path.join(model_dir, "model_best.pth"))
 
+        swanlab.log({"val/psnr": psnr_val_rgb, "val/best_psnr": best_psnr, "epoch": epoch})
         print("[epoch %d PSNR: %.4f --- best_epoch %d Best_PSNR %.4f]" % (epoch, psnr_val_rgb, best_epoch, best_psnr))
 
         torch.save({'epoch': epoch,
@@ -204,10 +240,12 @@ for epoch in range(start_epoch, num_epochs + 1):
 
     scheduler.step()
 
+    current_lr = scheduler.get_lr()[0]
     print("------------------------------------------------------------------")
     print("Epoch: {}\tTime: {:.4f}\tLoss: {:.4f}\tLearningRate {:.6f}".format(epoch, time.time() - epoch_start_time,
-                                                                              epoch_loss, scheduler.get_lr()[0]))
+                                                                              epoch_loss, current_lr))
     print("------------------------------------------------------------------")
+    swanlab.log({"lr": current_lr, "epoch_time": time.time() - epoch_start_time, "epoch": epoch})
 
     torch.save({'epoch': epoch,
                 'state_dict': model_restoration.state_dict(),
@@ -215,3 +253,4 @@ for epoch in range(start_epoch, num_epochs + 1):
                 }, os.path.join(model_dir, "model_latest.pth"))
 
 writer.close()
+swanlab.finish()

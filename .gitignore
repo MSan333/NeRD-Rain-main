@@ -1,0 +1,43 @@
+# Paper & docs
+paper/
+
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Training artifacts
+checkpoints/
+logs/
+*.pth
+*.pt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Qoder
+.qoder/
+
+# Virtual environment
+nerd/
+.venv/
+
+# Training logs
+logs_H20_*.txt
+logs_stage*.txt
+
+# Temporary scripts
+probe_batchsize.py
+upload_oss.py
+retry_upload.py
