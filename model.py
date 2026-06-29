@@ -388,7 +388,7 @@ class MultiscaleNet(nn.Module):
 
         self.down2_3_small = Downsample(int(dim * 2 ** 1))
         self.latent_small = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_small = Upsample(int(dim * 2 ** 2))
@@ -429,10 +429,10 @@ class MultiscaleNet(nn.Module):
         self.down2_3_mid = Downsample(int(dim * 2 ** 1))
         self.down2_3_mid2 = Downsample(int(dim * 2 ** 1))
         self.latent_mid1 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_mid2 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_mid = Upsample(int(dim * 2 ** 2))
@@ -491,13 +491,13 @@ class MultiscaleNet(nn.Module):
         self.down2_3_max2 = Downsample(int(dim * 2 ** 1))
         self.down2_3_max3 = Downsample(int(dim * 2 ** 1))
         self.latent_max1 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_max2 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_max3 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            RFM_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_max = Upsample(int(dim * 2 ** 2))

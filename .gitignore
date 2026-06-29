@@ -1,0 +1,34 @@
+# Paper & docs
+paper/
+doc/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Training artifacts
+checkpoints/
+logs/
+*.pth
+*.pt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Qoder
+.qoder/
+
+# Temporary scripts
+upload_oss.py
+retry_upload.py

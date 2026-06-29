@@ -19,7 +19,7 @@ import utils
 from data_RGB import get_training_data, get_validation_data
 from model import MultiscaleNet as myNet
 #from model_S import MultiscaleNet as myNet
-import losses
+from losses import CharbonnierLoss, EdgeLoss, fftLoss, HierarchicalAdaptiveFreqLoss
 from warmup_scheduler import GradualWarmupScheduler
 from tqdm import tqdm
 from get_parameter_number import get_parameter_number
@@ -134,10 +134,11 @@ if len(device_ids) > 1:
     model_restoration = nn.DataParallel(model_restoration, device_ids=device_ids)
 
 ######### Loss ###########
-criterion_char = losses.CharbonnierLoss()
-criterion_edge = losses.EdgeLoss()
-criterion_fft = losses.fftLoss()
+criterion_char = CharbonnierLoss()
+criterion_edge = EdgeLoss()
+criterion_fft = fftLoss()
 criterion_L1 = nn.L1Loss(size_average=True)
+criterion_hafl = HierarchicalAdaptiveFreqLoss()  # 创新点3: HAFL损失
 
 ######### DataLoaders ###########
 train_dataset = get_training_data(train_dir, {'patch_size': patch_size})
@@ -177,7 +178,9 @@ for epoch in range(start_epoch, num_epochs + 1):
         loss_char = criterion_char(restored[0], target[0]) + criterion_char(restored[1], target[1]) + criterion_char(restored[2], target[2])
         loss_edge = criterion_edge(restored[0], target[0]) + criterion_edge(restored[1], target[1]) + criterion_edge(restored[2], target[2])
         loss_l1 = criterion_L1(restored[3], target[1]) + criterion_L1(restored[5], target[2])
-        loss = loss_char + 0.01 * loss_fft + 0.05 * loss_edge + 0.1 * loss_l1
+        # 创新点3: HAFL损失（对最高尺度输出计算）
+        loss_hafl = criterion_hafl(restored[0], target[0], epoch, num_epochs)
+        loss = loss_char + 0.01 * loss_fft + 0.05 * loss_edge + 0.1 * loss_l1 + 0.1 * loss_hafl
         loss.backward()
         optimizer.step()
         epoch_loss += loss.item()
@@ -187,6 +190,7 @@ for epoch in range(start_epoch, num_epochs + 1):
             "loss/char_loss": loss_char.item(),
             "loss/edge_loss": loss_edge.item(),
             "loss/l1_loss": loss_l1.item(),
+            "loss/hafl_loss": loss_hafl.item(),
             "loss/iter_loss": loss.item(),
             "iter": iter,
         })
@@ -194,6 +198,7 @@ for epoch in range(start_epoch, num_epochs + 1):
         writer.add_scalar('loss/char_loss', loss_char, iter)
         writer.add_scalar('loss/edge_loss', loss_edge, iter)
         writer.add_scalar('loss/l1_loss', loss_l1, iter)
+        writer.add_scalar('loss/hafl_loss', loss_hafl, iter)
         writer.add_scalar('loss/iter_loss', loss, iter)
     swanlab.log({"loss/epoch_loss": epoch_loss, "epoch": epoch})
     writer.add_scalar('loss/epoch_loss', epoch_loss, epoch)
