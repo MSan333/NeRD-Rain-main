@@ -112,7 +112,7 @@ if is_main:
     get_parameter_number(model_restoration)
 
 model_restoration = model_restoration.cuda(local_rank)
-model_restoration = DDP(model_restoration, device_ids=[local_rank])
+model_restoration = DDP(model_restoration, device_ids=[local_rank], find_unused_parameters=True)
 
 optimizer = optim.Adam(model_restoration.parameters(), lr=start_lr, betas=(0.9, 0.999), eps=1e-8)
 
@@ -121,7 +121,7 @@ warmup_epochs = 3
 scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs - warmup_epochs, eta_min=end_lr)
 scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=warmup_epochs, after_scheduler=scheduler_cosine)
 
-RESUME = True
+RESUME = False
 Pretrain = False
 model_pre_dir = ''
 
@@ -216,7 +216,7 @@ for epoch in range(start_epoch, num_epochs + 1):
                 "loss/hafl_loss": loss_hafl.item(),
                 "loss/iter_loss": loss.item(),
                 "iter": iter,
-            })
+            }, step=iter)
             writer.add_scalar('loss/fft_loss', loss_fft, iter)
             writer.add_scalar('loss/char_loss', loss_char, iter)
             writer.add_scalar('loss/edge_loss', loss_edge, iter)
@@ -225,7 +225,7 @@ for epoch in range(start_epoch, num_epochs + 1):
             writer.add_scalar('loss/iter_loss', loss, iter)
 
     if is_main:
-        swanlab.log({"loss/epoch_loss": epoch_loss, "epoch": epoch})
+        swanlab.log({"loss/epoch_loss": epoch_loss, "epoch": epoch}, step=epoch)
         writer.add_scalar('loss/epoch_loss', epoch_loss, epoch)
 
     #### Evaluation (rank 0 only) ####
@@ -253,7 +253,7 @@ for epoch in range(start_epoch, num_epochs + 1):
                             'optimizer': optimizer.state_dict()
                             }, os.path.join(model_dir, "model_best.pth"))
 
-            swanlab.log({"val/psnr": psnr_val_rgb, "val/best_psnr": best_psnr, "epoch": epoch})
+            swanlab.log({"val/psnr": psnr_val_rgb, "val/best_psnr": best_psnr, "epoch": epoch}, step=epoch)
             print("[epoch %d PSNR: %.4f --- best_epoch %d Best_PSNR %.4f]" % (epoch, psnr_val_rgb, best_epoch, best_psnr))
 
             torch.save({'epoch': epoch,
@@ -269,7 +269,7 @@ for epoch in range(start_epoch, num_epochs + 1):
         print("Epoch: {}\tTime: {:.4f}\tLoss: {:.4f}\tLearningRate {:.6f}".format(epoch, time.time() - epoch_start_time,
                                                                                   epoch_loss, current_lr))
         print("------------------------------------------------------------------")
-        swanlab.log({"lr": current_lr, "epoch_time": time.time() - epoch_start_time, "epoch": epoch})
+        swanlab.log({"lr": current_lr, "epoch_time": time.time() - epoch_start_time, "epoch": epoch}, step=epoch)
 
         torch.save({'epoch': epoch,
                     'state_dict': model_restoration.module.state_dict(),
