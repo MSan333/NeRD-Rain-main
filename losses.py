@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 class CharbonnierLoss(nn.Module):
     """Charbonnier Loss (L1)"""
@@ -64,7 +65,14 @@ class HierarchicalAdaptiveFreqLoss(nn.Module):
         self.cutoff_high = cutoff_high
         self.l1 = nn.L1Loss()
 
-    def forward(self, pred, target, epoch, total_epochs):
+    def forward(self, pred, target, epoch, total_epochs, warmup_epochs=50):
+        # HAFL warmup: 前 warmup_epochs 个 epoch cosine上升，防止初期频域损失不稳定
+        # 与整体 cosine LR schedule 风格一致：初期极保守，中后期加速追赶
+        if epoch < warmup_epochs:
+            warmup_scale = 0.5 * (1 - math.cos(math.pi * epoch / warmup_epochs))
+        else:
+            warmup_scale = 1.0
+
         # 频率分解
         pred_low, pred_mid, pred_high = self.frequency_decompose(pred)
         gt_low, gt_mid, gt_high = self.frequency_decompose(target)
@@ -80,7 +88,7 @@ class HierarchicalAdaptiveFreqLoss(nn.Module):
         w_mid = 0.5 * min(1.0, 2 * t)  # 线性增长
         w_high = 0.3 * min(1.0, max(0, 3 * (t - 1 / 3)))  # 延迟启动
 
-        return w_low * loss_low + w_mid * loss_mid + w_high * loss_high
+        return warmup_scale * (w_low * loss_low + w_mid * loss_mid + w_high * loss_high)
 
     def frequency_decompose(self, x):
         """将图像分解为低/中/高频三个子带"""

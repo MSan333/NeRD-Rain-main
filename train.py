@@ -48,9 +48,9 @@ parser.add_argument('--val_dir', default='../data/Rain200L/test/', type=str, hel
 parser.add_argument('--model_save_dir', default='./change2/checkpoints/', type=str, help='Path to save weights')
 parser.add_argument('--pretrain_weights', default='', type=str, help='Path to pretrain-weights')
 parser.add_argument('--mode', default='Deraininig', type=str)
-parser.add_argument('--session', default='Multiscale', type=str, help='session')
+parser.add_argument('--session', default='DDP_4GPU_exp3', type=str, help='session')
 parser.add_argument('--patch_size', default=256, type=int, help='patch size')
-parser.add_argument('--num_epochs', default=500, type=int, help='num_epochs')
+parser.add_argument('--num_epochs', default=1000, type=int, help='num_epochs')
 parser.add_argument('--batch_size', default=1, type=int, help='batch_size per gpu')
 parser.add_argument('--val_epochs', default=1, type=int, help='val_epochs')
 parser.add_argument('--local_rank', default=0, type=int, help='local rank for DDP')
@@ -101,8 +101,8 @@ num_epochs = args.num_epochs
 batch_size = args.batch_size
 val_epochs = args.val_epochs
 
-# 方案C修正: 从best checkpoint恢复, 起始lr=2e-4, 无warmup, 500 epoch内cosine衰减
-start_lr = 2e-4
+# 线性缩放: base_lr=1e-4 × 4卡 = 4e-4
+start_lr = 4e-4
 end_lr = 4e-6
 
 ######### Model ###########
@@ -117,12 +117,11 @@ model_restoration = DDP(model_restoration, device_ids=[local_rank], find_unused_
 optimizer = optim.Adam(model_restoration.parameters(), lr=start_lr, betas=(0.9, 0.999), eps=1e-8)
 
 ######### Scheduler ###########
-warmup_epochs = 0
-# 无warmup, 直接cosine衰减
-scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=end_lr)
-scheduler = scheduler_cosine
+warmup_epochs = 3
+scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs - warmup_epochs, eta_min=end_lr)
+scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=warmup_epochs, after_scheduler=scheduler_cosine)
 
-RESUME = True
+RESUME = False
 Pretrain = False
 model_pre_dir = ''
 
@@ -137,26 +136,16 @@ if Pretrain:
 
 ######### Resume ###########
 if RESUME:
-    path_chk_rest = utils.get_last_path(model_dir, '_best.pth')
+    path_chk_rest = utils.get_last_path(model_dir, '_latest.pth')
     utils.load_checkpoint(model_restoration.module, path_chk_rest)
-    resume_epoch = utils.load_start_epoch(path_chk_rest)
-    start_epoch = resume_epoch + 1
-    # 不加载旧optimizer状态，用新的lr=2e-4直接开始
-    # utils.load_optim(optimizer, path_chk_rest)
-
-    # 实际训练500 epoch: 从start_epoch到start_epoch+num_epochs-1
-    num_epochs = start_epoch + num_epochs - 1  # end_epoch = 284+500-1 = 783
-
-    # cosine T_max = 实际训练epoch数 = 500
-    actual_train_epochs = num_epochs - start_epoch + 1
-    scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, actual_train_epochs, eta_min=end_lr)
-    scheduler = scheduler_cosine
-
-    new_lr = optimizer.param_groups[0]['lr']
+    start_epoch = utils.load_start_epoch(path_chk_rest) + 1
+    utils.load_optim(optimizer, path_chk_rest)
+    for i in range(1, start_epoch):
+        scheduler.step()
+    new_lr = scheduler.get_lr()[0]
     if is_main:
         print('------------------------------------------------------------------------------')
-        print(f"==> 方案C修正: 从best checkpoint(ep{resume_epoch})恢复, lr={start_lr}, cosine {actual_train_epochs} epochs")
-        print(f"==> Start Epoch {start_epoch}, End Epoch {num_epochs}, LR={new_lr}")
+        print("==> Resuming Training with learning rate:", new_lr)
         print('------------------------------------------------------------------------------')
 
 ######### Loss ###########
