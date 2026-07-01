@@ -139,19 +139,24 @@ if Pretrain:
 if RESUME:
     path_chk_rest = utils.get_last_path(model_dir, '_best.pth')
     utils.load_checkpoint(model_restoration.module, path_chk_rest)
-    start_epoch = utils.load_start_epoch(path_chk_rest) + 1
+    resume_epoch = utils.load_start_epoch(path_chk_rest)
+    start_epoch = resume_epoch + 1
     # 不加载旧optimizer状态，用新的lr=2e-4直接开始
     # utils.load_optim(optimizer, path_chk_rest)
 
-    # 直接cosine从2e-4衰减到4e-6，500 epoch内完成
-    scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=end_lr)
+    # 实际训练500 epoch: 从start_epoch到start_epoch+num_epochs-1
+    num_epochs = start_epoch + num_epochs - 1  # end_epoch = 284+500-1 = 783
+
+    # cosine T_max = 实际训练epoch数 = 500
+    actual_train_epochs = num_epochs - start_epoch + 1
+    scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, actual_train_epochs, eta_min=end_lr)
     scheduler = scheduler_cosine
 
     new_lr = optimizer.param_groups[0]['lr']
     if is_main:
         print('------------------------------------------------------------------------------')
-        print(f"==> 方案C修正: 从best checkpoint恢复, start_lr={start_lr}, cosine {num_epochs} epochs")
-        print(f"==> Resuming from epoch {start_epoch}, LR={new_lr}")
+        print(f"==> 方案C修正: 从best checkpoint(ep{resume_epoch})恢复, lr={start_lr}, cosine {actual_train_epochs} epochs")
+        print(f"==> Start Epoch {start_epoch}, End Epoch {num_epochs}, LR={new_lr}")
         print('------------------------------------------------------------------------------')
 
 ######### Loss ###########
