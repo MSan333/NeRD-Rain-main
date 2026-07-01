@@ -45,7 +45,7 @@ parser = argparse.ArgumentParser(description='Image Deraininig')
 
 parser.add_argument('--train_dir', default='../data/Rain200L/train/', type=str, help='Directory of train images')
 parser.add_argument('--val_dir', default='../data/Rain200L/test/', type=str, help='Directory of validation images')
-parser.add_argument('--model_save_dir', default='./change2/checkpoints/', type=str, help='Path to save weights')
+parser.add_argument('--model_save_dir', default='./ckpt/', type=str, help='Path to save weights')
 parser.add_argument('--pretrain_weights', default='', type=str, help='Path to pretrain-weights')
 parser.add_argument('--mode', default='Deraininig', type=str)
 parser.add_argument('--session', default='DDP_4GPU_exp3', type=str, help='session')
@@ -54,6 +54,7 @@ parser.add_argument('--num_epochs', default=1000, type=int, help='num_epochs')
 parser.add_argument('--batch_size', default=1, type=int, help='batch_size per gpu')
 parser.add_argument('--val_epochs', default=1, type=int, help='val_epochs')
 parser.add_argument('--local_rank', default=0, type=int, help='local rank for DDP')
+parser.add_argument('--hafl_warmup_epochs', default=50, type=int, help='HAFL loss warmup epochs (linear ramp-up)')
 args = parser.parse_args()
 
 ######### DDP Init ###########
@@ -73,12 +74,13 @@ if is_main:
     swanlab.login(api_key="o4MGQAOSX8rGztH69Jj5P")
     swanlab.init(
         project="NeRD-Rain",
-        experiment_name=args.session,
+        experiment_name="DDP_4GPU_exp3",
         config={
             **vars(args),
             "start_lr": 4e-4,
             "end_lr": 4e-6,
             "warmup_epochs": 3,
+            "hafl_warmup_epochs": args.hafl_warmup_epochs,
             "optimizer": "Adam",
             "betas": (0.9, 0.999),
             "eps": 1e-8,
@@ -205,7 +207,7 @@ for epoch in range(start_epoch, num_epochs + 1):
         loss_edge = criterion_edge(restored[0], target[0]) + criterion_edge(restored[1], target[1]) + criterion_edge(restored[2], target[2])
         loss_l1 = criterion_L1(restored[3], target[1]) + criterion_L1(restored[5], target[2])
         # 创新点3: HAFL损失（对最高尺度输出计算）
-        loss_hafl = criterion_hafl(restored[0], target[0], epoch, num_epochs)
+        loss_hafl = criterion_hafl(restored[0], target[0], epoch, num_epochs, args.hafl_warmup_epochs)
         loss = loss_char + 0.01 * loss_fft + 0.05 * loss_edge + 0.1 * loss_l1 + 0.1 * loss_hafl
         loss.backward()
         optimizer.step()
@@ -264,10 +266,6 @@ for epoch in range(start_epoch, num_epochs + 1):
             swanlab.log({"val/psnr": psnr_val_rgb, "val/best_psnr": best_psnr, "epoch": epoch}, step=epoch)
             print("[epoch %d PSNR: %.4f --- best_epoch %d Best_PSNR %.4f]" % (epoch, psnr_val_rgb, best_epoch, best_psnr))
 
-            torch.save({'epoch': epoch,
-                        'state_dict': model_restoration.module.state_dict(),
-                        'optimizer': optimizer.state_dict()
-                        }, os.path.join(model_dir, f"model_epoch_{epoch}.pth"))
 
     scheduler.step()
 
