@@ -50,7 +50,7 @@ parser.add_argument('--pretrain_weights', default='', type=str, help='Path to pr
 parser.add_argument('--mode', default='Deraininig', type=str)
 parser.add_argument('--session', default='Multiscale', type=str, help='session')
 parser.add_argument('--patch_size', default=256, type=int, help='patch size')
-parser.add_argument('--num_epochs', default=3000, type=int, help='num_epochs')
+parser.add_argument('--num_epochs', default=500, type=int, help='num_epochs')
 parser.add_argument('--batch_size', default=1, type=int, help='batch_size per gpu')
 parser.add_argument('--val_epochs', default=1, type=int, help='val_epochs')
 parser.add_argument('--local_rank', default=0, type=int, help='local rank for DDP')
@@ -101,8 +101,8 @@ num_epochs = args.num_epochs
 batch_size = args.batch_size
 val_epochs = args.val_epochs
 
-# 线性缩放: base_lr=1e-4 × 4卡 = 4e-4
-start_lr = 4e-4
+# 方案C修正: 从best checkpoint恢复, 起始lr=2e-4, 无warmup, 500 epoch内cosine衰减
+start_lr = 2e-4
 end_lr = 4e-6
 
 ######### Model ###########
@@ -117,11 +117,12 @@ model_restoration = DDP(model_restoration, device_ids=[local_rank], find_unused_
 optimizer = optim.Adam(model_restoration.parameters(), lr=start_lr, betas=(0.9, 0.999), eps=1e-8)
 
 ######### Scheduler ###########
-warmup_epochs = 3
-scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs - warmup_epochs, eta_min=end_lr)
-scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=warmup_epochs, after_scheduler=scheduler_cosine)
+warmup_epochs = 0
+# 无warmup, 直接cosine衰减
+scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=end_lr)
+scheduler = scheduler_cosine
 
-RESUME = False
+RESUME = True
 Pretrain = False
 model_pre_dir = ''
 
@@ -136,17 +137,21 @@ if Pretrain:
 
 ######### Resume ###########
 if RESUME:
-    path_chk_rest = utils.get_last_path(model_dir, '_latest.pth')
+    path_chk_rest = utils.get_last_path(model_dir, '_best.pth')
     utils.load_checkpoint(model_restoration.module, path_chk_rest)
     start_epoch = utils.load_start_epoch(path_chk_rest) + 1
-    utils.load_optim(optimizer, path_chk_rest)
+    # 不加载旧optimizer状态，用新的lr=2e-4直接开始
+    # utils.load_optim(optimizer, path_chk_rest)
 
-    for i in range(1, start_epoch):
-        scheduler.step()
-    new_lr = scheduler.get_lr()[0]
+    # 直接cosine从2e-4衰减到4e-6，500 epoch内完成
+    scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=end_lr)
+    scheduler = scheduler_cosine
+
+    new_lr = optimizer.param_groups[0]['lr']
     if is_main:
         print('------------------------------------------------------------------------------')
-        print("==> Resuming Training with learning rate:", new_lr)
+        print(f"==> 方案C修正: 从best checkpoint恢复, start_lr={start_lr}, cosine {num_epochs} epochs")
+        print(f"==> Resuming from epoch {start_epoch}, LR={new_lr}")
         print('------------------------------------------------------------------------------')
 
 ######### Loss ###########
