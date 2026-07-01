@@ -179,6 +179,11 @@ iter = 0
 for epoch in range(start_epoch, num_epochs + 1):
     epoch_start_time = time.time()
     epoch_loss = 0
+    epoch_fft_loss = 0
+    epoch_char_loss = 0
+    epoch_edge_loss = 0
+    epoch_l1_loss = 0
+    epoch_hafl_loss = 0
     train_id = 1
 
     # DDP: 每个epoch设置sampler的epoch以保证不同的shuffle
@@ -206,17 +211,13 @@ for epoch in range(start_epoch, num_epochs + 1):
         loss.backward()
         optimizer.step()
         epoch_loss += loss.item()
+        epoch_fft_loss += loss_fft.item()
+        epoch_char_loss += loss_char.item()
+        epoch_edge_loss += loss_edge.item()
+        epoch_l1_loss += loss_l1.item()
+        epoch_hafl_loss += loss_hafl.item()
         iter += 1
         if is_main:
-            swanlab.log({
-                "loss/fft_loss": loss_fft.item(),
-                "loss/char_loss": loss_char.item(),
-                "loss/edge_loss": loss_edge.item(),
-                "loss/l1_loss": loss_l1.item(),
-                "loss/hafl_loss": loss_hafl.item(),
-                "loss/iter_loss": loss.item(),
-                "iter": iter,
-            }, step=iter)
             writer.add_scalar('loss/fft_loss', loss_fft, iter)
             writer.add_scalar('loss/char_loss', loss_char, iter)
             writer.add_scalar('loss/edge_loss', loss_edge, iter)
@@ -225,7 +226,15 @@ for epoch in range(start_epoch, num_epochs + 1):
             writer.add_scalar('loss/iter_loss', loss, iter)
 
     if is_main:
-        swanlab.log({"loss/epoch_loss": epoch_loss, "epoch": epoch}, step=epoch)
+        swanlab.log({
+            "loss/epoch_loss": epoch_loss,
+            "loss/fft_loss": epoch_fft_loss,
+            "loss/char_loss": epoch_char_loss,
+            "loss/edge_loss": epoch_edge_loss,
+            "loss/l1_loss": epoch_l1_loss,
+            "loss/hafl_loss": epoch_hafl_loss,
+            "epoch": epoch,
+        }, step=epoch)
         writer.add_scalar('loss/epoch_loss', epoch_loss, epoch)
 
     #### Evaluation (rank 0 only) ####
