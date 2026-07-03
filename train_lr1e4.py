@@ -118,7 +118,7 @@ val_epochs = args.val_epochs
 
 # 降 LR 续训: 1e-4 → 1e-6（原 4e-4 → 4e-6）
 start_lr = 1e-4
-end_lr = 1e-6
+end_lr = 2e-6
 
 ######### Model ###########
 model_restoration = myNet()

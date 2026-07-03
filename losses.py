@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
 
 class CharbonnierLoss(nn.Module):
     """Charbonnier Loss (L1)"""
@@ -66,10 +65,10 @@ class HierarchicalAdaptiveFreqLoss(nn.Module):
         self.l1 = nn.L1Loss()
 
     def forward(self, pred, target, epoch, total_epochs, warmup_epochs=50):
-        # HAFL warmup: 前 warmup_epochs 个 epoch cosine上升，防止初期频域损失不稳定
-        # 与整体 cosine LR schedule 风格一致：初期极保守，中后期加速追赶
+        # HAFL warmup: 前 warmup_epochs(默认50) 个 epoch 线性上升，从小权重逐步增加
+        # linear 与 LR warmup 配合更直观：每个epoch均匀积累，稳定可预期
         if epoch < warmup_epochs:
-            warmup_scale = 0.5 * (1 - math.cos(math.pi * epoch / warmup_epochs))
+            warmup_scale = epoch / warmup_epochs
         else:
             warmup_scale = 1.0
 

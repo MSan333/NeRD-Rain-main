@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>硕士中期答辩 — 基于频域增强的图像去雨方法研究</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+<style>
+  :root {
+    --r-background-color: #000000;
+    --r-main-color: #f5f5f7;
+    --r-heading-color: #ffffff;
+    --r-link-color: #2997ff;
+    --blue: #2997ff;
+    --purple: #a855f7;
+    --gradient: linear-gradient(135deg, #2997ff, #a855f7);
+    --gradient-h: linear-gradient(90deg, #2997ff, #a855f7);
+    --red: #ff453a;
+    --orange: #ff9f0a;
+    --green: #30d158;
+    --gray: #86868b;
+    --card-bg: rgba(255,255,255,0.06);
+    --glass: rgba(255,255,255,0.08);
+  }
+  .reveal-viewport { background: #000; }
+  .reveal {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 32px; font-weight: 300; color: #f5f5f7;
+  }
+  .reveal .slides { text-align: center; }
+  .reveal .slides > section { padding: 40px 60px; }
+  .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+    color: #fff; font-weight: 700; text-transform: none;
+    letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 0.5em; text-shadow: none;
+  }
+  .reveal h1 { font-size: 2.8em; }
+  .reveal h2 { font-size: 2.0em; }
+  .reveal h3 { font-size: 1.4em; color: #86868b; font-weight: 500; }
+  .reveal h4 { font-size: 1.1em; color: var(--blue); font-weight: 600; }
+  .reveal p { line-height: 1.7; margin-bottom: 0.6em; color: #a1a1a6; font-size: 0.85em; }
+  .reveal strong { color: #f5f5f7; font-weight: 600; }
+  .reveal ul, .reveal ol { list-style: none; margin: 0; padding: 0; text-align: left; }
+  .reveal li { margin-bottom: 0.5em; line-height: 1.6; font-size: 0.85em; color: #a1a1a6; padding-left: 1.5em; position: relative; }
+  .reveal li::before { content: "›"; position: absolute; left: 0; color: var(--blue); font-weight: 700; font-size: 1.2em; }
+  .reveal .slide-number { color: var(--gray); font-size: 14px; font-family: inherit; }
+  .gradient-text {
+    background: var(--gradient-h); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .gradient-text-warm {
+    background: linear-gradient(90deg, #ff9f0a, #ff453a);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .hero-number { font-size: 5em; font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; margin: 0.2em 0; }
+  .hero-number-sm { font-size: 3em; font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; }
+  .subtitle { font-size: 1.2em; color: var(--gray); font-weight: 400; margin-top: 0.3em; }
+  .tag { display: inline-block; padding: 6px 18px; border-radius: 20px; font-size: 0.55em; font-weight: 600; margin: 4px 6px; letter-spacing: 0; }
+  .tag-blue { background: rgba(41,151,255,0.15); color: var(--blue); }
+  .tag-purple { background: rgba(168,85,247,0.15); color: var(--purple); }
+  .tag-green { background: rgba(48,209,88,0.15); color: var(--green); }
+  .tag-red { background: rgba(255,69,58,0.15); color: var(--red); }
+  .tag-orange { background: rgba(255,159,10,0.15); color: var(--orange); }
+  .card {
+    background: var(--card-bg); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+    border-radius: 20px; padding: 30px 36px; margin: 12px 8px; text-align: left;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .card-center { text-align: center; }
+  .cards-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .cards-row .card { flex: 1; min-width: 220px; max-width: 360px; }
+  .reveal table { border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 0.65em; border: none; }
+  .reveal th {
+    background: transparent; color: var(--gray); font-weight: 600; text-transform: uppercase;
+    font-size: 0.85em; letter-spacing: 0.05em; padding: 14px 18px; border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left;
+  }
+  .reveal td {
+    padding: 16px 18px; border: none; border-bottom: 1px solid rgba(255,255,255,0.05);
+    text-align: left; color: #f5f5f7; font-weight: 400;
+  }
+  .reveal tr:hover td { background: rgba(255,255,255,0.03); }
+  .reveal td.highlight-cell { color: var(--blue); font-weight: 700; font-size: 1.15em; }
+  .reveal td.warn-cell { color: var(--orange); font-weight: 600; }
+  .formula {
+    background: rgba(255,255,255,0.04); border-radius: 14px; padding: 20px 30px;
+    margin: 16px auto; display: inline-block; font-family: "SF Mono","Fira Code","Cascadia Code",monospace;
+    font-size: 0.7em; color: #e8e8ed; border: 1px solid rgba(255,255,255,0.06); letter-spacing: 0;
+  }
+  .icon { font-size: 2.4em; margin-bottom: 10px; display: block; }
+  .section-label { font-size: 0.5em; text-transform: uppercase; letter-spacing: 0.15em; color: var(--blue); font-weight: 600; margin-bottom: 12px; }
+  .divider { width: 60px; height: 4px; background: var(--gradient-h); border-radius: 2px; margin: 20px auto; }
+  .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin: 8px 0; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; background: var(--gradient-h); }
+  .pain { text-align: left; padding: 16px 24px; border-left: 3px solid var(--red); background: rgba(255,69,58,0.06); border-radius: 0 12px 12px 0; margin: 10px 0; }
+  .pain strong { color: #ff453a; }
+  .solution { text-align: left; padding: 16px 24px; border-left: 3px solid var(--green); background: rgba(48,209,88,0.06); border-radius: 0 12px 12px 0; margin: 10px 0; }
+  .solution strong { color: #30d158; }
+  .timeline-item { display: flex; align-items: flex-start; gap: 16px; margin: 12px 0; text-align: left; font-size: 0.8em; }
+  .timeline-dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .dot-done { background: var(--green); }
+  .dot-progress { background: var(--orange); animation: pulse 1.5s infinite; }
+  .dot-todo { background: rgba(255,255,255,0.2); }
+  @keyframes pulse {
+    0%,100% { opacity:1; box-shadow: 0 0 0 0 rgba(255,159,10,0.4); }
+    50% { opacity:0.7; box-shadow: 0 0 0 8px rgba(255,159,10,0); }
+  }
+  .reveal section img { border: none; box-shadow: none; background: transparent; }
+  svg text { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif; }
+  .svg-diagram { margin: 10px auto; display: block; }
+  .formula-block {
+    background: rgba(255,255,255,0.04); border-radius: 16px; padding: 24px 36px;
+    margin: 14px auto; text-align: left; border: 1px solid rgba(255,255,255,0.06);
+    font-family: "SF Mono","Fira Code","Cascadia Code",monospace; font-size: 0.62em;
+    color: #e8e8ed; line-height: 2.0; max-width: 800px;
+  }
+  .formula-block .f-label { color: var(--blue); font-weight: 600; font-size: 0.85em; margin-bottom: 4px; }
+  .formula-block .f-note { color: #86868b; font-size: 0.85em; }
+  @media (max-width: 768px) {
+    .reveal { font-size: 22px; }
+    .hero-number { font-size: 3em; }
+    .cards-row .card { min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============ PART 1: OPENING ============ -->
+
+<!-- Slide 1: Cover -->
+<section data-background-gradient="radial-gradient(ellipse at 50% 40%, #0a1628 0%, #000 70%)">
+  <div style="margin-top: 80px;">
+    <p class="section-label">硕士学位论文中期答辩</p>
+    <h1 style="font-size: 2.2em; line-height: 1.25;">
+      基于频域增强的<br><span class="gradient-text">图像去雨方法研究</span>
+    </h1>
+    <div class="divider"></div>
+    <p style="color: #86868b; font-size: 0.7em; margin-top: 30px;">
+      [待补充：姓名] · [待补充：导师] · [待补充：学院]
+    </p>
+    <p style="color: #48484a; font-size: 0.5em;">2026 年 7 月</p>
+  </div>
+</section>
+
+<!-- Slide 2: Overview -->
+<section data-background-color="#000">
+  <p class="section-label">OVERVIEW</p>
+  <h2 style="font-size: 1.8em;">今天聊什么</h2>
+  <div class="cards-row" style="margin-top: 30px;">
+    <div class="card card-center" style="flex: 0 0 160px;"><span class="icon">🌧️</span><p style="color:#f5f5f7; font-size:0.75em; font-weight:600;">背景</p></div>
+    <div class="card card-center" style="flex: 0 0 160px;"><span class="icon">📐</span><p style="color:#f5f5f7; font-size:0.75em; font-weight:600;">基线</p></div>
+    <div class="card card-center" style="flex: 0 0 160px;"><span class="icon">🔬</span><p style="color:#f5f5f7; font-size:0.75em; font-weight:600;">方法</p></div>
+    <div class="card card-center" style="flex: 0 0 160px;"><span class="icon">📊</span><p style="color:#f5f5f7; font-size:0.75em; font-weight:600;">实验</p></div>
+    <div class="card card-center" style="flex: 0 0 160px;"><span class="icon">🗓️</span><p style="color:#f5f5f7; font-size:0.75em; font-weight:600;">计划</p></div>
+  </div>
+</section>
+
+<!-- ============ PART 2: BACKGROUND ============ -->
+
+<!-- Slide 3: Section Title -->
+<section data-background-gradient="radial-gradient(ellipse at 30% 50%, #0d1f3c 0%, #000 70%)">
+  <p class="section-label" style="color: var(--gray);">PART 01</p>
+  <h1 style="font-size: 3em; font-weight: 800;"><span class="gradient-text">研究背景</span></h1>
+  <p style="font-size: 0.8em; color: #86868b;">为什么要做图像去雨？</p>
+</section>
+
+<!-- Slide 4: Why Deraining -->
+<section data-background-color="#000">
+  <h2 style="font-size: 1.6em;">雨天图像退化<br>严重影响下游任务</h2>
+  <div class="cards-row" style="margin-top: 24px;">
+    <div class="card card-center">
+      <span class="hero-number-sm gradient-text-warm">−30%</span>
+      <p style="font-size:0.7em; color:#86868b;">目标检测 AP 下降</p>
+    </div>
+    <div class="card card-center">
+      <span class="hero-number-sm gradient-text-warm">−15%</span>
+      <p style="font-size:0.7em; color:#86868b;">语义分割 mIoU 下降</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 5: Application Scenes -->
+<section data-background-color="#000">
+  <p class="section-label">应用场景</p>
+  <h2 style="font-size: 1.5em;">去雨是视觉系统的<span class="gradient-text">基础前置模块</span></h2>
+  <div class="cards-row" style="margin-top: 20px;">
+    <div class="card card-center" style="flex: 0 0 180px;"><span class="icon">🚗</span><p style="color:#f5f5f7; font-size:0.7em; font-weight:500;">自动驾驶</p></div>
+    <div class="card card-center" style="flex: 0 0 180px;"><span class="icon">📹</span><p style="color:#f5f5f7; font-size:0.7em; font-weight:500;">智能监控</p></div>
+    <div class="card card-center" style="flex: 0 0 180px;"><span class="icon">🛰️</span><p style="color:#f5f5f7; font-size:0.7em; font-weight:500;">遥感成像</p></div>
+    <div class="card card-center" style="flex: 0 0 180px;"><span class="icon">📱</span><p style="color:#f5f5f7; font-size:0.7em; font-weight:500;">手机摄影</p></div>
+  </div>
+  <p style="margin-top: 24px; font-size: 0.75em; color: #86868b;">
+    全球约 <strong style="color: #f5f5f7;">30%</strong> 的时间处于降雨天气
+  </p>
+</section>
+
+<!-- Slide 6: Method Evolution -->
+<section data-background-color="#000">
+  <p class="section-label">发展脉络</p>
+  <h2 style="font-size: 1.5em;">从传统到深度，从 CNN 到 INR</h2>
+  <div style="margin-top: 30px;">
+    <div class="card" style="margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div><span class="tag tag-blue">传统方法</span><span style="font-size:0.7em; color:#86868b; margin-left: 8px;">稀疏编码 · GMM · 形态学</span></div>
+        <span style="font-size:0.65em; color: var(--gray);">计算慢 · 泛化差</span>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div><span class="tag tag-purple">CNN 时代</span><span style="font-size:0.7em; color:#86868b; margin-left: 8px;">DerainNet → PReNet → MPRNet</span></div>
+        <span style="font-size:0.65em; color: var(--gray);">2016–2022</span>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div><span class="tag tag-green">Transformer</span><span style="font-size:0.7em; color:#86868b; margin-left: 8px;">Restormer · Uformer</span></div>
+        <span style="font-size:0.65em; color: var(--gray);">2022–2024</span>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div><span class="tag tag-orange">INR 时代</span><span style="font-size:0.7em; color:#86868b; margin-left: 8px;">NeRD-Rain</span></div>
+        <span style="font-size:0.65em; color: var(--blue); font-weight:600;">CVPR 2024</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 7: Pain Points -->
+<section data-background-color="#000">
+  <p class="section-label" style="color: var(--red);">CURRENT CHALLENGES</p>
+  <h2 style="font-size: 1.5em;">三大核心痛点</h2>
+  <div style="margin-top: 20px;">
+    <div class="pain" style="margin-bottom: 14px;">
+      <p style="font-size: 0.8em; margin: 0;"><strong>痛点 1</strong> — 忽视雨纹的<strong>频域特征分布</strong></p>
+      <p style="font-size: 0.65em; margin: 6px 0 0; color: #a1a1a6;">雨纹在频域呈现周期性模式，但大多数方法仅在空域处理</p>
+    </div>
+  </div>
+  <div>
+    <div class="pain" style="margin-bottom: 14px;">
+      <p style="font-size: 0.8em; margin: 0;"><strong>痛点 2</strong> — 缺乏对雨纹<strong>方向性结构</strong>的显式建模</p>
+      <p style="font-size: 0.65em; margin: 6px 0 0; color: #a1a1a6;">雨纹具有强方向先验（水平/竖直/对角），通用卷积无法有效捕获</p>
+    </div>
+  </div>
+  <div>
+    <div class="pain">
+      <p style="font-size: 0.8em; margin: 0;"><strong>痛点 3</strong> — 训练中<strong>频域信息利用不足</strong></p>
+      <p style="font-size: 0.65em; margin: 6px 0 0; color: #a1a1a6;">标准 L1/L2 损失无法引导模型关注不同频段的恢复优先级</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 3: BASELINE ============ -->
+
+<!-- Slide 8: Section Title -->
+<section data-background-gradient="radial-gradient(ellipse at 70% 50%, #0d1f3c 0%, #000 70%)">
+  <p class="section-label" style="color: var(--gray);">PART 02</p>
+  <h1 style="font-size: 3em; font-weight: 800;"><span class="gradient-text">基线方法</span></h1>
+  <p style="font-size: 0.8em; color: #86868b;">站在巨人的肩膀上</p>
+</section>
+
+<!-- Slide 9: NeRD-Rain -->
+<section data-background-color="#000">
+  <p class="section-label">PART 02 · 基线方法</p>
+  <h2 style="font-size: 1.5em;">NeRD-Rain<br><span style="font-size: 0.5em; color: #86868b;">CVPR 2024</span></h2>
+  <div class="divider"></div>
+  <p style="font-size: 0.85em; color: #a1a1a6; max-width: 700px; margin: 16px auto;">
+    双向多尺度<strong style="color: #f5f5f7;">隐式神经表示（INR）</strong><br>
+    用连续函数建模雨纹 → 干净图像的映射
+  </p>
+  <div style="margin-top: 20px;">
+    <span class="hero-number-sm gradient-text">41.71</span>
+    <p style="font-size: 0.65em; color: var(--gray);">Rain200L · PSNR (dB)</p>
+  </div>
+</section>
+
+<!-- Slide 10: NeRD-Rain Limits -->
+<section data-background-color="#000">
+  <p class="section-label">基线的局限</p>
+  <h2 style="font-size: 1.4em;">两个关键不足</h2>
+  <div class="cards-row" style="margin-top: 24px;">
+    <div class="card">
+      <span class="icon">🔇</span>
+      <p style="color: #f5f5f7; font-size: 0.8em; font-weight: 600; margin-bottom: 6px;">未充分利用频域信息</p>
+      <p style="font-size: 0.65em; color: #86868b; margin: 0;">仅在空域进行 INR 重建，<br>忽略了频域中雨纹的周期性特征</p>
+    </div>
+    <div class="card">
+      <span class="icon">🧭</span>
+      <p style="color: #f5f5f7; font-size: 0.8em; font-weight: 600; margin-bottom: 6px;">缺乏方向性感知</p>
+      <p style="font-size: 0.65em; color: #86868b; margin: 0;">通用 MLP 无法显式捕获<br>雨纹的方向先验结构</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 4: OUR METHOD ============ -->
+
+<!-- Slide 11: Section Title -->
+<section data-background-gradient="radial-gradient(ellipse at 50% 60%, #0d1f3c 0%, #000 70%)">
+  <p class="section-label" style="color: var(--gray);">PART 03</p>
+  <h1 style="font-size: 3em; font-weight: 800;"><span class="gradient-text">我们的方法</span></h1>
+  <p style="font-size: 0.8em; color: #86868b;">三个创新点，全链路增强</p>
+</section>
+
+<!-- Slide 12: Overall Idea -->
+<section data-background-gradient="radial-gradient(ellipse at 50% 50%, #0a1628 0%, #000 70%)">
+  <p class="section-label">PART 03 · 我们的方法</p>
+  <h2 style="font-size: 1.8em;"><span class="gradient-text">频域视角下的全链路增强</span></h2>
+  <div class="divider"></div>
+  <div class="cards-row" style="margin-top: 30px;">
+    <div class="card card-center" style="flex: 0 0 200px;">
+      <span class="icon">🏗️</span>
+      <p style="color: var(--blue); font-size: 0.75em; font-weight: 600;">模型设计</p>
+      <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">频域显式建模</p>
+    </div>
+    <div class="card card-center" style="flex: 0 0 200px;">
+      <span class="icon">⚡</span>
+      <p style="color: var(--purple); font-size: 0.75em; font-weight: 600;">模型增强</p>
+      <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">方向性梯度感知</p>
+    </div>
+    <div class="card card-center" style="flex: 0 0 200px;">
+      <span class="icon">🎯</span>
+      <p style="color: var(--green); font-size: 0.75em; font-weight: 600;">训练优化</p>
+      <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">频域约束损失</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 13: NeRD-Rain Overall Architecture SVG -->
+<section data-background-color="#000">
+  <p class="section-label">网络架构</p>
+  <h2 style="font-size: 1.3em;">NeRD-Rain 整体结构</h2>
+  <svg viewBox="0 0 1000 480" class="svg-diagram" style="max-width:960px; width:100%;">
+    <!-- Input -->
+    <rect x="10" y="200" width="110" height="60" rx="12" fill="none" stroke="#2997ff" stroke-width="2"/>
+    <text x="65" y="235" text-anchor="middle" fill="#f5f5f7" font-size="14" font-weight="600">输入雨图</text>
+    <!-- Arrow -->
+    <line x1="120" y1="230" x2="165" y2="230" stroke="#86868b" stroke-width="2" marker-end="url(#arrowW)"/>
+    <!-- Encoder -->
+    <rect x="170" y="180" width="140" height="100" rx="14" fill="rgba(41,151,255,0.1)" stroke="#2997ff" stroke-width="2"/>
+    <text x="240" y="225" text-anchor="middle" fill="#2997ff" font-size="15" font-weight="700">Encoder</text>
+    <text x="240" y="248" text-anchor="middle" fill="#86868b" font-size="11">多尺度编码</text>
+    <!-- Arrows to 3 scales -->
+    <line x1="310" y1="210" x2="380" y2="120" stroke="#86868b" stroke-width="1.5" marker-end="url(#arrowW)"/>
+    <line x1="310" y1="230" x2="380" y2="230" stroke="#86868b" stroke-width="1.5" marker-end="url(#arrowW)"/>
+    <line x1="310" y1="250" x2="380" y2="340" stroke="#86868b" stroke-width="1.5" marker-end="url(#arrowW)"/>
+    <!-- Small scale -->
+    <rect x="385" y="90" width="160" height="56" rx="10" fill="rgba(48,209,88,0.08)" stroke="#30d158" stroke-width="1.5"/>
+    <text x="465" y="115" text-anchor="middle" fill="#30d158" font-size="13" font-weight="600">小尺度</text>
+    <text x="465" y="133" text-anchor="middle" fill="#86868b" font-size="11">48 ch · 高分辨率</text>
+    <!-- Mid scale -->
+    <rect x="385" y="202" width="160" height="56" rx="10" fill="rgba(168,85,247,0.08)" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="465" y="227" text-anchor="middle" fill="#a855f7" font-size="13" font-weight="600">中尺度</text>
+    <text x="465" y="245" text-anchor="middle" fill="#86868b" font-size="11">96 ch · 中分辨率</text>
+    <!-- Large scale -->
+    <rect x="385" y="314" width="160" height="56" rx="10" fill="rgba(255,69,58,0.08)" stroke="#ff453a" stroke-width="1.5"/>
+    <text x="465" y="339" text-anchor="middle" fill="#ff453a" font-size="13" font-weight="600">大尺度</text>
+    <text x="465" y="357" text-anchor="middle" fill="#86868b" font-size="11">192 ch · 低分辨率</text>
+    <!-- Arrows to Bidirectional INR -->
+    <line x1="545" y1="118" x2="615" y2="200" stroke="#86868b" stroke-width="1.5" marker-end="url(#arrowW)"/>
+    <line x1="545" y1="230" x2="615" y2="230" stroke="#86868b" stroke-width="1.5" marker-end="url(#arrowW)"/>
+    <line x1="545" y1="342" x2="615" y2="260" stroke="#86868b" stroke-width="1.5" marker-end="url(#arrowW)"/>
+    <!-- Bidirectional INR -->
+    <rect x="620" y="180" width="170" height="100" rx="14" fill="rgba(168,85,247,0.1)" stroke="#a855f7" stroke-width="2"/>
+    <text x="705" y="220" text-anchor="middle" fill="#a855f7" font-size="14" font-weight="700">Bidirectional</text>
+    <text x="705" y="240" text-anchor="middle" fill="#a855f7" font-size="14" font-weight="700">INR</text>
+    <text x="705" y="260" text-anchor="middle" fill="#86868b" font-size="11">隐式神经表示</text>
+    <!-- Arrow to Decoder -->
+    <line x1="790" y1="230" x2="835" y2="230" stroke="#86868b" stroke-width="2" marker-end="url(#arrowW)"/>
+    <!-- Decoder -->
+    <rect x="840" y="180" width="140" height="100" rx="14" fill="rgba(48,209,88,0.1)" stroke="#30d158" stroke-width="2"/>
+    <text x="910" y="225" text-anchor="middle" fill="#30d158" font-size="15" font-weight="700">Decoder</text>
+    <text x="910" y="248" text-anchor="middle" fill="#86868b" font-size="11">重建输出</text>
+    <!-- Arrow to Output -->
+    <line x1="910" y1="280" x2="910" y2="390" stroke="#86868b" stroke-width="2" marker-end="url(#arrowW)"/>
+    <rect x="845" y="395" width="130" height="50" rx="12" fill="none" stroke="#30d158" stroke-width="2"/>
+    <text x="910" y="425" text-anchor="middle" fill="#f5f5f7" font-size="14" font-weight="600">去雨图</text>
+    <!-- Arrow marker -->
+    <defs>
+      <marker id="arrowW" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#86868b"/>
+      </marker>
+    </defs>
+    <!-- INR internal note -->
+    <text x="705" y="420" text-anchor="middle" fill="#48484a" font-size="11">连续函数建模 · 任意分辨率输出</text>
+  </svg>
+</section>
+
+<!-- Slide 14: TransformerBlock SVG -->
+<section data-background-color="#000">
+  <p class="section-label">核心模块</p>
+  <h2 style="font-size: 1.3em;">TransformerBlock 内部结构</h2>
+  <svg viewBox="0 0 800 520" class="svg-diagram" style="max-width:780px; width:100%;">
+    <defs>
+      <marker id="aW" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#86868b"/>
+      </marker>
+      <marker id="aB" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#2997ff"/>
+      </marker>
+    </defs>
+    <!-- Input x -->
+    <text x="60" y="30" fill="#f5f5f7" font-size="14" font-weight="600">输入 x</text>
+    <line x1="80" y1="38" x2="80" y2="68" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <!-- LayerNorm 1 -->
+    <rect x="20" y="73" width="120" height="36" rx="8" fill="rgba(255,255,255,0.06)" stroke="#86868b" stroke-width="1.5"/>
+    <text x="80" y="96" text-anchor="middle" fill="#a1a1a6" font-size="12">LayerNorm</text>
+    <line x1="80" y1="109" x2="80" y2="135" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <!-- Multi-Head Attention -->
+    <rect x="10" y="140" width="140" height="40" rx="10" fill="rgba(41,151,255,0.1)" stroke="#2997ff" stroke-width="1.5"/>
+    <text x="80" y="165" text-anchor="middle" fill="#2997ff" font-size="12" font-weight="600">Multi-Head Attn</text>
+    <line x1="80" y1="180" x2="80" y2="210" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <!-- Add 1 -->
+    <circle cx="80" cy="222" r="14" fill="none" stroke="#30d158" stroke-width="1.5"/>
+    <text x="80" y="227" text-anchor="middle" fill="#30d158" font-size="14" font-weight="700">+</text>
+    <!-- Residual line from input -->
+    <path d="M 30 30 L 30 222 L 66 222" fill="none" stroke="#30d158" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#aW)"/>
+    <line x1="80" y1="236" x2="80" y2="262" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <!-- Mid label -->
+    <text x="80" y="258" text-anchor="middle" fill="#48484a" font-size="10">中间特征</text>
+    <!-- LayerNorm 2 -->
+    <rect x="20" y="267" width="120" height="36" rx="8" fill="rgba(255,255,255,0.06)" stroke="#86868b" stroke-width="1.5"/>
+    <text x="80" y="290" text-anchor="middle" fill="#a1a1a6" font-size="12">LayerNorm</text>
+    <!-- Three branches -->
+    <line x1="80" y1="303" x2="80" y2="330" stroke="#86868b" stroke-width="1.5"/>
+    <!-- Branch lines -->
+    <line x1="80" y1="330" x2="200" y2="360" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <line x1="80" y1="330" x2="400" y2="360" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <line x1="80" y1="330" x2="600" y2="360" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <!-- FFN -->
+    <rect x="140" y="365" width="120" height="44" rx="10" fill="rgba(168,85,247,0.1)" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="200" y="392" text-anchor="middle" fill="#a855f7" font-size="13" font-weight="600">FFN</text>
+    <!-- RFM -->
+    <rect x="340" y="365" width="120" height="44" rx="10" fill="rgba(41,151,255,0.1)" stroke="#2997ff" stroke-width="1.5"/>
+    <text x="400" y="392" text-anchor="middle" fill="#2997ff" font-size="13" font-weight="600">RFM</text>
+    <!-- α·MDPConv -->
+    <rect x="530" y="365" width="140" height="44" rx="10" fill="rgba(48,209,88,0.1)" stroke="#30d158" stroke-width="1.5"/>
+    <text x="600" y="392" text-anchor="middle" fill="#30d158" font-size="13" font-weight="600">α · MDPConv</text>
+    <!-- Merge lines -->
+    <line x1="200" y1="409" x2="200" y2="445" stroke="#86868b" stroke-width="1.5"/>
+    <line x1="400" y1="409" x2="400" y2="445" stroke="#86868b" stroke-width="1.5"/>
+    <line x1="600" y1="409" x2="600" y2="445" stroke="#86868b" stroke-width="1.5"/>
+    <line x1="200" y1="445" x2="600" y2="445" stroke="#86868b" stroke-width="1.5"/>
+    <line x1="400" y1="445" x2="400" y2="468" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <!-- Add 2 -->
+    <circle cx="400" cy="480" r="14" fill="none" stroke="#30d158" stroke-width="1.5"/>
+    <text x="400" y="485" text-anchor="middle" fill="#30d158" font-size="14" font-weight="700">+</text>
+    <!-- Residual from mid feature -->
+    <path d="M 150 222 L 740 222 L 740 480 L 414 480" fill="none" stroke="#30d158" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#aW)"/>
+    <!-- Output -->
+    <line x1="400" y1="494" x2="400" y2="512" stroke="#86868b" stroke-width="1.5" marker-end="url(#aW)"/>
+    <text x="400" y="520" text-anchor="middle" fill="#f5f5f7" font-size="13" font-weight="600">输出</text>
+  </svg>
+</section>
+
+<!-- Slide 15: RFM Overview -->
+<section data-background-color="#000">
+  <p class="section-label">创新点 1 · RFM</p>
+  <h2 style="font-size: 1.5em;">残差频域模块<br><span style="font-size:0.5em; color:#86868b;">Residual Frequency Module</span></h2>
+  <div class="solution" style="margin-top: 20px;">
+    <p style="font-size: 0.8em; margin: 0;"><strong>针对痛点 1</strong> — 引入频域显式建模</p>
+  </div>
+  <p style="font-size: 0.75em; color: #a1a1a6; margin-top: 16px;">
+    在频域中直接操作幅度谱，增强被雨纹掩盖的频率成分
+  </p>
+</section>
+
+<!-- Slide 16: RFM SVG Diagram -->
+<section data-background-color="#000">
+  <p class="section-label">RFM · 结构图</p>
+  <h2 style="font-size: 1.2em;">残差频域模块流程</h2>
+  <svg viewBox="0 0 960 440" class="svg-diagram" style="max-width:920px; width:100%;">
+    <defs>
+      <marker id="aG" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#86868b"/></marker>
+    </defs>
+    <!-- Input -->
+    <rect x="10" y="190" width="80" height="50" rx="10" fill="none" stroke="#2997ff" stroke-width="2"/>
+    <text x="50" y="220" text-anchor="middle" fill="#f5f5f7" font-size="13" font-weight="600">输入 x</text>
+    <line x1="90" y1="215" x2="135" y2="215" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <!-- FFT -->
+    <rect x="140" y="185" width="90" height="60" rx="12" fill="rgba(41,151,255,0.1)" stroke="#2997ff" stroke-width="2"/>
+    <text x="185" y="212" text-anchor="middle" fill="#2997ff" font-size="15" font-weight="700">FFT</text>
+    <text x="185" y="232" text-anchor="middle" fill="#86868b" font-size="10">空域→频域</text>
+    <!-- Split into two branches -->
+    <line x1="230" y1="200" x2="290" y2="130" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <line x1="230" y1="230" x2="290" y2="300" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <!-- Amplitude branch -->
+    <rect x="295" y="100" width="130" height="50" rx="10" fill="rgba(168,85,247,0.1)" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="360" y="122" text-anchor="middle" fill="#a855f7" font-size="13" font-weight="600">幅度 Amp</text>
+    <text x="360" y="140" text-anchor="middle" fill="#86868b" font-size="10">|FFT(x)|</text>
+    <line x1="425" y1="125" x2="470" y2="125" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <!-- Conv1x1 -->
+    <rect x="475" y="100" width="90" height="50" rx="10" fill="rgba(255,159,10,0.1)" stroke="#ff9f0a" stroke-width="1.5"/>
+    <text x="520" y="122" text-anchor="middle" fill="#ff9f0a" font-size="12" font-weight="600">Conv 1×1</text>
+    <text x="520" y="140" text-anchor="middle" fill="#86868b" font-size="10">通道压缩</text>
+    <line x1="565" y1="125" x2="600" y2="125" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <!-- ReLU -->
+    <rect x="605" y="100" width="70" height="50" rx="10" fill="rgba(255,69,58,0.1)" stroke="#ff453a" stroke-width="1.5"/>
+    <text x="640" y="130" text-anchor="middle" fill="#ff453a" font-size="13" font-weight="600">ReLU</text>
+    <line x1="675" y1="125" x2="710" y2="125" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <!-- Conv1x1 again -->
+    <rect x="715" y="100" width="90" height="50" rx="10" fill="rgba(255,159,10,0.1)" stroke="#ff9f0a" stroke-width="1.5"/>
+    <text x="760" y="122" text-anchor="middle" fill="#ff9f0a" font-size="12" font-weight="600">Conv 1×1</text>
+    <text x="760" y="140" text-anchor="middle" fill="#86868b" font-size="10">通道恢复</text>
+    <!-- Phase branch -->
+    <rect x="295" y="275" width="130" height="50" rx="10" fill="rgba(48,209,88,0.1)" stroke="#30d158" stroke-width="1.5"/>
+    <text x="360" y="297" text-anchor="middle" fill="#30d158" font-size="13" font-weight="600">相位 Phase</text>
+    <text x="360" y="315" text-anchor="middle" fill="#86868b" font-size="10">∠FFT(x)</text>
+    <line x1="425" y1="300" x2="600" y2="300" stroke="#30d158" stroke-width="1.5" stroke-dasharray="6,4"/>
+    <text x="512" y="293" text-anchor="middle" fill="#30d158" font-size="11">保持不变</text>
+    <!-- Merge -->
+    <line x1="805" y1="125" x2="855" y2="200" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <line x1="600" y1="300" x2="855" y2="220" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <!-- Composite -->
+    <rect x="855" y="185" width="90" height="60" rx="12" fill="rgba(168,85,247,0.1)" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="900" y="212" text-anchor="middle" fill="#a855f7" font-size="11" font-weight="600">复合频域</text>
+    <text x="900" y="228" text-anchor="middle" fill="#a855f7" font-size="11" font-weight="600">特征</text>
+    <line x1="900" y1="245" x2="900" y2="290" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <!-- iFFT -->
+    <rect x="855" y="295" width="90" height="50" rx="12" fill="rgba(41,151,255,0.1)" stroke="#2997ff" stroke-width="2"/>
+    <text x="900" y="322" text-anchor="middle" fill="#2997ff" font-size="15" font-weight="700">iFFT</text>
+    <text x="900" y="340" text-anchor="middle" fill="#86868b" font-size="10">频域→空域</text>
+    <line x1="900" y1="345" x2="900" y2="385" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <!-- Add residual -->
+    <circle cx="900" cy="397" r="14" fill="none" stroke="#30d158" stroke-width="1.5"/>
+    <text x="900" y="402" text-anchor="middle" fill="#30d158" font-size="14" font-weight="700">+</text>
+    <!-- Residual connection from input -->
+    <path d="M 50 240 L 50 397 L 886 397" fill="none" stroke="#30d158" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#aG)"/>
+    <text x="450" y="410" text-anchor="middle" fill="#30d158" font-size="11">残差连接</text>
+    <!-- Output -->
+    <line x1="900" y1="411" x2="900" y2="430" stroke="#86868b" stroke-width="1.5" marker-end="url(#aG)"/>
+    <text x="900" y="440" text-anchor="middle" fill="#f5f5f7" font-size="13" font-weight="600">输出</text>
+  </svg>
+</section>
+
+<!-- Slide 17: RFM Formula -->
+<section data-background-color="#000">
+  <p class="section-label">RFM · 公式</p>
+  <h2 style="font-size: 1.3em;">残差频域增强</h2>
+  <div class="formula-block" style="margin-top: 24px; max-width: 750px;">
+    <div class="f-label">频域增强特征</div>
+    F<sub>enhanced</sub> = Conv( |FFT(x)| ) · e<sup> j · Phase(FFT(x)) </sup>
+    <br><br>
+    <div class="f-label">残差输出</div>
+    x<sub>out</sub> = x + iFFT( F<sub>enhanced</sub> )
+    <br><br>
+    <div class="f-note">幅度谱经两层 1×1 Conv + ReLU 增强，相位保持不变，最终通过残差连接融合</div>
+  </div>
+</section>
+
+<!-- Slide 18: RFM Result -->
+<section data-background-color="#000">
+  <p class="section-label">RFM · 效果</p>
+  <h2>频域建模带来稳定提升</h2>
+  <div style="margin-top: 30px;">
+    <span class="hero-number gradient-text">+0.08 dB</span>
+    <p style="font-size: 0.75em; color: #86868b; margin-top: 10px;">Rain200L · PSNR 提升</p>
+  </div>
+  <p style="font-size: 0.7em; color: #a1a1a6; margin-top: 20px;">
+    轻量级模块，<strong style="color: #f5f5f7;">几乎不增加参数量</strong>
+  </p>
+</section>
+
+<!-- Slide 19: MFGCP Overview -->
+<section data-background-color="#000">
+  <p class="section-label">创新点 2 · MFGCP</p>
+  <h2 style="font-size: 1.4em;">多尺度频域-梯度<br><span class="gradient-text">协同感知模块</span></h2>
+  <div class="solution" style="margin-top: 16px;">
+    <p style="font-size: 0.8em; margin: 0;"><strong>针对痛点 2</strong> — 引入方向性梯度感知</p>
+  </div>
+  <p style="font-size: 0.7em; color: #a1a1a6; margin-top: 12px;">
+    Multi-scale Frequency-Gradient Co-Perception
+  </p>
+</section>
+
+<!-- Slide 20: MDPConv 5-Direction SVG -->
+<section data-background-color="#000">
+  <p class="section-label">MFGCP · 核心组件</p>
+  <h2 style="font-size: 1.2em;">MDPConv · 五方向微分卷积</h2>
+  <svg viewBox="0 0 980 460" class="svg-diagram" style="max-width:950px; width:100%;">
+    <defs><marker id="aM" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#86868b"/></marker></defs>
+    <!-- Input -->
+    <rect x="10" y="200" width="90" height="50" rx="10" fill="none" stroke="#2997ff" stroke-width="2"/>
+    <text x="55" y="230" text-anchor="middle" fill="#f5f5f7" font-size="13" font-weight="600">输入特征</text>
+    <!-- 5 branch lines -->
+    <line x1="100" y1="210" x2="170" y2="60" stroke="#86868b" stroke-width="1.2" marker-end="url(#aM)"/>
+    <line x1="100" y1="215" x2="170" y2="150" stroke="#86868b" stroke-width="1.2" marker-end="url(#aM)"/>
+    <line x1="100" y1="225" x2="170" y2="240" stroke="#86868b" stroke-width="1.2" marker-end="url(#aM)"/>
+    <line x1="100" y1="235" x2="170" y2="330" stroke="#86868b" stroke-width="1.2" marker-end="url(#aM)"/>
+    <line x1="100" y1="240" x2="170" y2="410" stroke="#86868b" stroke-width="1.2" marker-end="url(#aM)"/>
+    <!-- Branch 1: HDC horizontal -->
+    <rect x="175" y="35" width="150" height="50" rx="10" fill="rgba(41,151,255,0.08)" stroke="#2997ff" stroke-width="1.5"/>
+    <text x="250" y="57" text-anchor="middle" fill="#2997ff" font-size="12" font-weight="600">HDC (1×3)</text>
+    <text x="250" y="74" text-anchor="middle" fill="#86868b" font-size="10">depthwise</text>
+    <!-- Kernel grid 1: horizontal [0,0,0; 1,-2,1; 0,0,0] -->
+    <g transform="translate(340,30)">
+      <rect x="0" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="18" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="0" y="18" width="18" height="18" fill="rgba(41,151,255,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="31" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="18" y="18" width="18" height="18" fill="rgba(255,69,58,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="27" y="31" text-anchor="middle" fill="#f5f5f7" font-size="8">-2</text>
+      <rect x="36" y="18" width="18" height="18" fill="rgba(41,151,255,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="45" y="31" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="0" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="18" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+    </g>
+    <text x="410" y="78" fill="#2997ff" font-size="11">→ 水平边缘</text>
+    <!-- Branch 2: VC vertical -->
+    <rect x="175" y="125" width="150" height="50" rx="10" fill="rgba(168,85,247,0.08)" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="250" y="147" text-anchor="middle" fill="#a855f7" font-size="12" font-weight="600">VC (3×1)</text>
+    <text x="250" y="164" text-anchor="middle" fill="#86868b" font-size="10">depthwise</text>
+    <g transform="translate(340,120)">
+      <rect x="0" y="0" width="18" height="18" fill="rgba(168,85,247,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="13" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="18" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="0" y="18" width="18" height="18" fill="rgba(255,69,58,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="31" text-anchor="middle" fill="#f5f5f7" font-size="8">-2</text>
+      <rect x="18" y="18" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="18" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="0" y="36" width="18" height="18" fill="rgba(168,85,247,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="49" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="18" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+    </g>
+    <text x="410" y="168" fill="#a855f7" font-size="11">↓ 竖直边缘</text>
+    <!-- Branch 3: CDC center diff -->
+    <rect x="175" y="215" width="150" height="50" rx="10" fill="rgba(48,209,88,0.08)" stroke="#30d158" stroke-width="1.5"/>
+    <text x="250" y="237" text-anchor="middle" fill="#30d158" font-size="12" font-weight="600">CDC (3×3)</text>
+    <text x="250" y="254" text-anchor="middle" fill="#86868b" font-size="10">depthwise</text>
+    <g transform="translate(340,210)">
+      <rect x="0" y="0" width="18" height="18" fill="rgba(48,209,88,0.2)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="13" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="18" y="0" width="18" height="18" fill="rgba(48,209,88,0.2)" stroke="#48484a" stroke-width="0.5"/><text x="27" y="13" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="36" y="0" width="18" height="18" fill="rgba(48,209,88,0.2)" stroke="#48484a" stroke-width="0.5"/><text x="45" y="13" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="0" y="18" width="18" height="18" fill="rgba(48,209,88,0.2)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="31" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="18" y="18" width="18" height="18" fill="rgba(255,69,58,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="27" y="31" text-anchor="middle" fill="#f5f5f7" font-size="7">-8</text>
+      <rect x="36" y="18" width="18" height="18" fill="rgba(48,209,88,0.2)" stroke="#48484a" stroke-width="0.5"/><text x="45" y="31" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="0" y="36" width="18" height="18" fill="rgba(48,209,88,0.2)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="49" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="18" y="36" width="18" height="18" fill="rgba(48,209,88,0.2)" stroke="#48484a" stroke-width="0.5"/><text x="27" y="49" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="36" y="36" width="18" height="18" fill="rgba(48,209,88,0.2)" stroke="#48484a" stroke-width="0.5"/><text x="45" y="49" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+    </g>
+    <text x="410" y="258" fill="#30d158" font-size="11">⊕ 中心差分</text>
+    <!-- Branch 4: ADC diagonal -->
+    <rect x="175" y="305" width="150" height="50" rx="10" fill="rgba(255,159,10,0.08)" stroke="#ff9f0a" stroke-width="1.5"/>
+    <text x="250" y="327" text-anchor="middle" fill="#ff9f0a" font-size="12" font-weight="600">ADC (3×3)</text>
+    <text x="250" y="344" text-anchor="middle" fill="#86868b" font-size="10">depthwise</text>
+    <g transform="translate(340,300)">
+      <rect x="0" y="0" width="18" height="18" fill="rgba(255,159,10,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="13" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="18" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="0" y="18" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="18" y="18" width="18" height="18" fill="rgba(255,69,58,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="27" y="31" text-anchor="middle" fill="#f5f5f7" font-size="8">-2</text>
+      <rect x="36" y="18" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="0" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="18" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="36" width="18" height="18" fill="rgba(255,159,10,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="45" y="49" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+    </g>
+    <text x="410" y="348" fill="#ff9f0a" font-size="11">↘ 对角线</text>
+    <!-- Branch 5: VDC anti-diagonal -->
+    <rect x="175" y="385" width="150" height="50" rx="10" fill="rgba(255,69,58,0.08)" stroke="#ff453a" stroke-width="1.5"/>
+    <text x="250" y="407" text-anchor="middle" fill="#ff453a" font-size="12" font-weight="600">VDC (3×3)</text>
+    <text x="250" y="424" text-anchor="middle" fill="#86868b" font-size="10">depthwise</text>
+    <g transform="translate(340,380)">
+      <rect x="0" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="18" y="0" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="0" width="18" height="18" fill="rgba(255,69,58,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="45" y="13" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="0" y="18" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="18" y="18" width="18" height="18" fill="rgba(255,69,58,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="27" y="31" text-anchor="middle" fill="#f5f5f7" font-size="8">-2</text>
+      <rect x="36" y="18" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="0" y="36" width="18" height="18" fill="rgba(255,69,58,0.3)" stroke="#48484a" stroke-width="0.5"/><text x="9" y="49" text-anchor="middle" fill="#f5f5f7" font-size="8">1</text>
+      <rect x="18" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+      <rect x="36" y="36" width="18" height="18" fill="rgba(255,255,255,0.04)" stroke="#48484a" stroke-width="0.5"/>
+    </g>
+    <text x="410" y="428" fill="#ff453a" font-size="11">↙ 反对角线</text>
+    <!-- Merge: element-wise sum -->
+    <line x1="500" y1="60" x2="580" y2="220" stroke="#86868b" stroke-width="1.2"/>
+    <line x1="500" y1="150" x2="580" y2="220" stroke="#86868b" stroke-width="1.2"/>
+    <line x1="500" y1="240" x2="580" y2="225" stroke="#86868b" stroke-width="1.2"/>
+    <line x1="500" y1="330" x2="580" y2="235" stroke="#86868b" stroke-width="1.2"/>
+    <line x1="500" y1="410" x2="580" y2="240" stroke="#86868b" stroke-width="1.2"/>
+    <!-- Sum circle -->
+    <circle cx="595" cy="228" r="18" fill="none" stroke="#f5f5f7" stroke-width="1.5"/>
+    <text x="595" y="233" text-anchor="middle" fill="#f5f5f7" font-size="12" font-weight="700">Σ</text>
+    <text x="595" y="260" text-anchor="middle" fill="#86868b" font-size="10">逐元素求和</text>
+    <line x1="613" y1="228" x2="660" y2="228" stroke="#86868b" stroke-width="1.5" marker-end="url(#aM)"/>
+    <!-- Conv 1x1 -->
+    <rect x="665" y="203" width="110" height="50" rx="10" fill="rgba(168,85,247,0.1)" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="720" y="225" text-anchor="middle" fill="#a855f7" font-size="13" font-weight="600">Conv 1×1</text>
+    <text x="720" y="243" text-anchor="middle" fill="#86868b" font-size="10">通道融合</text>
+    <line x1="775" y1="228" x2="820" y2="228" stroke="#86868b" stroke-width="1.5" marker-end="url(#aM)"/>
+    <!-- Output -->
+    <rect x="825" y="205" width="80" height="46" rx="10" fill="none" stroke="#30d158" stroke-width="2"/>
+    <text x="865" y="233" text-anchor="middle" fill="#f5f5f7" font-size="13" font-weight="600">输出</text>
+    <!-- Reference -->
+    <text x="500" y="455" text-anchor="middle" fill="#48484a" font-size="10">参考 DeRainMamba (IEEE SPL 2025) 方向微分思想</text>
+  </svg>
+</section>
+
+<!-- Slide 21: MFGCP Fusion + Formula -->
+<section data-background-color="#000">
+  <p class="section-label">MFGCP · 融合机制</p>
+  <h2 style="font-size: 1.3em;">频域-空域 <span class="gradient-text">双域协同</span></h2>
+  <div class="formula-block" style="margin-top: 20px; max-width: 750px;">
+    <div class="f-label">TransformerBlock 更新规则</div>
+    x = x + Attn( Norm(x) )
+    <br>
+    x = x + FFN( Norm(x) ) + RFM(x) + α · MDPConv(x)
+    <br><br>
+    <div class="f-label">可学习权重</div>
+    α 初始化为 0.1，训练中自适应调整
+    <br><br>
+    <div class="f-note">RFM 路径：频域抑制雨纹，捕获周期性模式<br>MDPConv 路径：空域利用方向先验，精确定位雨纹边缘<br>α 自适应平衡双域贡献</div>
+  </div>
+</section>
+
+<!-- Slide 22: MFGCP Status -->
+<section data-background-color="#000">
+  <p class="section-label">MFGCP · 状态</p>
+  <h2>模块已实现</h2>
+  <div style="margin-top: 30px;">
+    <span class="tag tag-orange" style="font-size: 0.8em; padding: 10px 24px;">验证中</span>
+    <p style="font-size: 0.75em; color: #86868b; margin-top: 16px;">集成于 exp3，正在训练验证</p>
+  </div>
+</section>
+
+<!-- Slide 23: HAFL Overview -->
+<section data-background-color="#000">
+  <p class="section-label">创新点 3 · HAFL</p>
+  <h2 style="font-size: 1.5em;">分层自适应<br><span class="gradient-text">频域损失</span></h2>
+  <div class="solution" style="margin-top: 16px;">
+    <p style="font-size: 0.8em; margin: 0;"><strong>针对痛点 3</strong> — 训练策略层面频域约束</p>
+  </div>
+  <p style="font-size: 0.7em; color: #a1a1a6; margin-top: 12px;">
+    Hierarchical Adaptive Frequency Loss
+  </p>
+</section>
+
+<!-- Slide 24: HAFL Frequency Decomposition SVG -->
+<section data-background-color="#000">
+  <p class="section-label">HAFL · 频域分解</p>
+  <h2 style="font-size: 1.2em;">三子带频域分解示意图</h2>
+  <svg viewBox="0 0 900 400" class="svg-diagram" style="max-width:860px; width:100%;">
+    <!-- Frequency ring diagram -->
+    <!-- High freq (outer) -->
+    <circle cx="200" cy="200" r="160" fill="none" stroke="#ff453a" stroke-width="2" opacity="0.6"/>
+    <circle cx="200" cy="200" r="160" fill="rgba(255,69,58,0.08)"/>
+    <!-- Mid freq (middle) -->
+    <circle cx="200" cy="200" r="110" fill="rgba(168,85,247,0.12)" stroke="#a855f7" stroke-width="2" opacity="0.7"/>
+    <!-- Low freq (center) -->
+    <circle cx="200" cy="200" r="55" fill="rgba(41,151,255,0.2)" stroke="#2997ff" stroke-width="2"/>
+    <!-- Labels on rings -->
+    <text x="200" y="205" text-anchor="middle" fill="#2997ff" font-size="14" font-weight="700">低频</text>
+    <text x="200" y="222" text-anchor="middle" fill="#86868b" font-size="10">整体结构</text>
+    <text x="200" y="120" text-anchor="middle" fill="#a855f7" font-size="12" font-weight="600">中频</text>
+    <text x="200" y="55" text-anchor="middle" fill="#ff453a" font-size="12" font-weight="600">高频</text>
+    <!-- Arrow labels -->
+    <line x1="370" y1="200" x2="430" y2="100" stroke="#86868b" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="370" y1="200" x2="430" y2="200" stroke="#86868b" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="370" y1="200" x2="430" y2="300" stroke="#86868b" stroke-width="1" stroke-dasharray="3,3"/>
+    <!-- Mask: low -->
+    <rect x="440" y="70" width="180" height="55" rx="10" fill="rgba(41,151,255,0.08)" stroke="#2997ff" stroke-width="1.5"/>
+    <text x="530" y="92" text-anchor="middle" fill="#2997ff" font-size="12" font-weight="600">mask_low</text>
+    <text x="530" y="112" text-anchor="middle" fill="#86868b" font-size="10">中心圆形掩码</text>
+    <!-- Mask: mid -->
+    <rect x="440" y="172" width="180" height="55" rx="10" fill="rgba(168,85,247,0.08)" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="530" y="194" text-anchor="middle" fill="#a855f7" font-size="12" font-weight="600">mask_mid</text>
+    <text x="530" y="214" text-anchor="middle" fill="#86868b" font-size="10">环形掩码</text>
+    <!-- Mask: high -->
+    <rect x="440" y="274" width="180" height="55" rx="10" fill="rgba(255,69,58,0.08)" stroke="#ff453a" stroke-width="1.5"/>
+    <text x="530" y="296" text-anchor="middle" fill="#ff453a" font-size="12" font-weight="600">mask_high</text>
+    <text x="530" y="316" text-anchor="middle" fill="#86868b" font-size="10">外环掩码</text>
+    <!-- Right side: FFT decomposition -->
+    <rect x="660" y="70" width="210" height="260" rx="14" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <text x="765" y="100" text-anchor="middle" fill="#f5f5f7" font-size="12" font-weight="600">频域分解流程</text>
+    <text x="765" y="130" text-anchor="middle" fill="#86868b" font-size="11">1. FFT(预测图) → 频域</text>
+    <text x="765" y="155" text-anchor="middle" fill="#86868b" font-size="11">2. FFT(GT) → 频域</text>
+    <text x="765" y="185" text-anchor="middle" fill="#86868b" font-size="11">3. 应用三子带掩码</text>
+    <text x="765" y="215" text-anchor="middle" fill="#86868b" font-size="11">4. iFFT → 各频段分量</text>
+    <text x="765" y="245" text-anchor="middle" fill="#86868b" font-size="11">5. 各频段计算 L1 Loss</text>
+    <text x="765" y="275" text-anchor="middle" fill="#86868b" font-size="11">6. 加权求和</text>
+    <text x="765" y="310" text-anchor="middle" fill="#a1a1a6" font-size="11">L_HAFL = Σ w_i · L1(X_i, Y_i)</text>
+  </svg>
+</section>
+
+<!-- Slide 25: HAFL Weight Schedule Curves SVG -->
+<section data-background-color="#000">
+  <p class="section-label">HAFL · 课程学习策略</p>
+  <h2 style="font-size: 1.2em;">渐进式权重调度曲线</h2>
+  <svg viewBox="0 0 800 380" class="svg-diagram" style="max-width:760px; width:100%;">
+    <!-- Axes -->
+    <line x1="80" y1="320" x2="740" y2="320" stroke="#48484a" stroke-width="1.5"/>
+    <line x1="80" y1="320" x2="80" y2="40" stroke="#48484a" stroke-width="1.5"/>
+    <!-- X axis labels -->
+    <text x="410" y="360" text-anchor="middle" fill="#86868b" font-size="12">训练进度 t (0 → 1)</text>
+    <text x="80" y="340" text-anchor="middle" fill="#86868b" font-size="11">0</text>
+    <text x="245" y="340" text-anchor="middle" fill="#86868b" font-size="11">0.25</text>
+    <text x="410" y="340" text-anchor="middle" fill="#86868b" font-size="11">0.5</text>
+    <text x="575" y="340" text-anchor="middle" fill="#86868b" font-size="11">0.75</text>
+    <text x="740" y="340" text-anchor="middle" fill="#86868b" font-size="11">1.0</text>
+    <!-- Y axis labels -->
+    <text x="70" y="325" text-anchor="end" fill="#86868b" font-size="11">0</text>
+    <text x="70" y="260" text-anchor="end" fill="#86868b" font-size="11">0.2</text>
+    <text x="70" y="195" text-anchor="end" fill="#86868b" font-size="11">0.4</text>
+    <text x="70" y="130" text-anchor="end" fill="#86868b" font-size="11">0.6</text>
+    <text x="70" y="65" text-anchor="end" fill="#86868b" font-size="11">0.8</text>
+    <text x="30" y="190" text-anchor="middle" fill="#86868b" font-size="12" transform="rotate(-90,30,190)">权重</text>
+    <!-- Grid lines -->
+    <line x1="80" y1="255" x2="740" y2="255" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+    <line x1="80" y1="190" x2="740" y2="190" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+    <line x1="80" y1="125" x2="740" y2="125" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+    <line x1="80" y1="60" x2="740" y2="60" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>
+    <!-- w_low = 0.8 (horizontal line) -->
+    <line x1="80" y1="60" x2="740" y2="60" stroke="#2997ff" stroke-width="2.5"/>
+    <text x="750" y="64" fill="#2997ff" font-size="12" font-weight="600">w_low = 0.8</text>
+    <!-- w_mid = 0.5·min(1, 2t) → reaches 0.5 at t=0.5 -->
+    <!-- y range: 0.5 max. pixel: 320 - 0.5/0.8*260 = 320-162.5 = 157.5 -->
+    <polyline points="80,320 410,157 740,157" fill="none" stroke="#a855f7" stroke-width="2.5"/>
+    <text x="750" y="161" fill="#a855f7" font-size="12" font-weight="600">w_mid</text>
+    <!-- w_high = 0.3·max(0, 3(t-1/3)) → starts at t=1/3, reaches 0.3 at t=2/3 -->
+    <!-- t=1/3 ≈ 299px, t=2/3 ≈ 520px. max y = 0.3/0.8*260 = 97.5, so y=320-97.5=222.5 -->
+    <polyline points="80,320 299,320 520,222 740,222" fill="none" stroke="#30d158" stroke-width="2.5"/>
+    <text x="750" y="226" fill="#30d158" font-size="12" font-weight="600">w_high</text>
+    <!-- Legend -->
+    <rect x="140" y="30" width="500" height="24" rx="6" fill="rgba(255,255,255,0.04)"/>
+    <line x1="155" y1="42" x2="180" y2="42" stroke="#2997ff" stroke-width="2"/>
+    <text x="185" y="46" fill="#86868b" font-size="10">w_low = 0.8</text>
+    <line x1="290" y1="42" x2="315" y2="42" stroke="#a855f7" stroke-width="2"/>
+    <text x="320" y="46" fill="#86868b" font-size="10">w_mid = 0.5·min(1, 2t)</text>
+    <line x1="480" y1="42" x2="505" y2="42" stroke="#30d158" stroke-width="2"/>
+    <text x="510" y="46" fill="#86868b" font-size="10">w_high = 0.3·delayed</text>
+  </svg>
+  <p style="font-size: 0.6em; color: #86868b; margin-top: 8px;">先学结构，再学纹理，最后学细节</p>
+</section>
+
+<!-- Slide 26: HAFL Loss Formula -->
+<section data-background-color="#000">
+  <p class="section-label">HAFL · 公式</p>
+  <h2 style="font-size: 1.3em;">分层自适应频域损失</h2>
+  <div class="formula-block" style="margin-top: 24px; max-width: 780px;">
+    <div class="f-label">HAFL 损失</div>
+    L<sub>HAFL</sub> = w<sub>low</sub> · L1(X<sub>low</sub>, Y<sub>low</sub>) + w<sub>mid</sub> · L1(X<sub>mid</sub>, Y<sub>mid</sub>) + w<sub>high</sub> · L1(X<sub>high</sub>, Y<sub>high</sub>)
+    <br><br>
+    <div class="f-label">权重调度</div>
+    w<sub>low</sub> = 0.8
+    <br>
+    w<sub>mid</sub> = 0.5 · min(1, 2t)
+    <br>
+    w<sub>high</sub> = 0.3 · max(0, 3(t − 1/3))
+    <br><br>
+    <div class="f-note">t = epoch / total_epochs，训练进度归一化到 [0, 1]<br>低频始终全权重；中频前半段线性增长；高频延迟至 1/3 进度后启动</div>
+  </div>
+</section>
+
+<!-- Slide 27: Total Loss Formula -->
+<section data-background-color="#000">
+  <p class="section-label">总损失函数</p>
+  <h2 style="font-size: 1.3em;">多目标联合优化</h2>
+  <div class="formula-block" style="margin-top: 24px; max-width: 780px;">
+    <div class="f-label">总损失</div>
+    L<sub>total</sub> = L<sub>char</sub> + 0.01 · L<sub>fft</sub> + 0.05 · L<sub>edge</sub> + 0.1 · L<sub>l1</sub> + 0.1 · L<sub>HAFL</sub>
+    <br><br>
+    <div class="f-note">L<sub>char</sub> : Charbonnier 损失（主损失）<br>L<sub>fft</sub> : 频域幅度损失<br>L<sub>edge</sub> : 边缘感知损失<br>L<sub>l1</sub> : 标准 L1 损失<br>L<sub>HAFL</sub> : 分层自适应频域损失（新增）</div>
+  </div>
+</section>
+
+<!-- Slide 28: HAFL Result -->
+<section data-background-color="#000">
+  <p class="section-label">HAFL · 效果</p>
+  <h2>在 RFM 基础上再提升</h2>
+  <div style="margin-top: 30px;">
+    <span class="hero-number gradient-text">+0.10 dB</span>
+    <p style="font-size: 0.75em; color: #86868b; margin-top: 10px;">在 RFM 基础上的额外 PSNR 提升</p>
+  </div>
+  <p style="font-size: 0.7em; color: #a1a1a6; margin-top: 16px;">
+    纯训练策略优化，<strong style="color: #f5f5f7;">零额外推理开销</strong>
+  </p>
+</section>
+
+<!-- ============ PART 5: EXPERIMENTS ============ -->
+
+<!-- Slide 29: Section Title -->
+<section data-background-gradient="radial-gradient(ellipse at 40% 40%, #0d1f3c 0%, #000 70%)">
+  <p class="section-label" style="color: var(--gray);">PART 04</p>
+  <h1 style="font-size: 3em; font-weight: 800;"><span class="gradient-text">实验结果</span></h1>
+  <p style="font-size: 0.8em; color: #86868b;">数据说话</p>
+</section>
+
+<!-- Slide 30: Experiment Setup -->
+<section data-background-color="#000">
+  <h2 style="font-size: 1.5em;">实验配置</h2>
+  <div class="cards-row" style="margin-top: 24px;">
+    <div class="card">
+      <p style="color: var(--blue); font-size: 0.7em; font-weight: 600; margin: 0 0 8px;">📦 数据集</p>
+      <p style="font-size: 0.65em; color: #a1a1a6; margin: 0;">Rain200L · 1800 train / 200 test</p>
+    </div>
+    <div class="card">
+      <p style="color: var(--purple); font-size: 0.7em; font-weight: 600; margin: 0 0 8px;">📏 评估指标</p>
+      <p style="font-size: 0.65em; color: #a1a1a6; margin: 0;">Y 通道 PSNR / SSIM<br>与 Matlab 结果对齐</p>
+    </div>
+  </div>
+  <div class="cards-row" style="margin-top: 12px;">
+    <div class="card">
+      <p style="color: var(--green); font-size: 0.7em; font-weight: 600; margin: 0 0 8px;">🖥️ 硬件</p>
+      <p style="font-size: 0.65em; color: #a1a1a6; margin: 0;">4×RTX 3090 DDP<br>H20 141GB</p>
+    </div>
+    <div class="card">
+      <p style="color: var(--orange); font-size: 0.7em; font-weight: 600; margin: 0 0 8px;">⚙️ 训练</p>
+      <p style="font-size: 0.65em; color: #a1a1a6; margin: 0;">1000–3000 epochs<br>Cosine LR Schedule</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 31: Ablation Table -->
+<section data-background-color="#000">
+  <p class="section-label">消融实验</p>
+  <h2 style="font-size: 1.4em;">逐步验证每个创新点</h2>
+  <div style="margin-top: 20px; overflow-x: auto;">
+    <table>
+      <thead>
+        <tr><th>配置</th><th>PSNR (dB)</th><th>SSIM</th><th>提升</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Baseline (NeRD-Rain)</td><td>41.71</td><td>0.9903</td><td style="color: #86868b;">—</td></tr>
+        <tr><td>+ RFM (exp1)</td><td class="highlight-cell">41.79</td><td>0.9906</td><td class="highlight-cell">+0.08</td></tr>
+        <tr><td>+ RFM + HAFL (exp2, 未训满)</td><td class="highlight-cell">41.89</td><td>0.9905</td><td class="highlight-cell">+0.18</td></tr>
+        <tr><td>+ RFM + MFGCP + HAFL (exp3)</td><td class="warn-cell">训练中</td><td class="warn-cell">—</td><td style="color: #86868b;">预期 &gt; 42.0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size: 0.55em; color: #86868b; margin-top: 8px;">* exp2 尚未训练满，为阶段性结果</p>
+</section>
+
+<!-- Slide 32: Ablation Progression SVG -->
+<section data-background-color="#000">
+  <p class="section-label">消融实验 · 递进结构</p>
+  <h2 style="font-size: 1.2em;">逐步叠加验证</h2>
+  <svg viewBox="0 0 900 300" class="svg-diagram" style="max-width:860px; width:100%;">
+    <defs><marker id="aP" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#86868b"/></marker></defs>
+    <!-- Baseline -->
+    <rect x="20" y="100" width="170" height="80" rx="14" fill="rgba(255,255,255,0.04)" stroke="#86868b" stroke-width="1.5"/>
+    <text x="105" y="132" text-anchor="middle" fill="#f5f5f7" font-size="14" font-weight="600">Baseline</text>
+    <text x="105" y="158" text-anchor="middle" fill="#86868b" font-size="24" font-weight="800">41.71</text>
+    <!-- Arrow 1 -->
+    <line x1="190" y1="140" x2="230" y2="140" stroke="#86868b" stroke-width="2" marker-end="url(#aP)"/>
+    <text x="210" y="125" text-anchor="middle" fill="#30d158" font-size="11" font-weight="600">+RFM</text>
+    <!-- +RFM -->
+    <rect x="235" y="100" width="170" height="80" rx="14" fill="rgba(41,151,255,0.08)" stroke="#2997ff" stroke-width="1.5"/>
+    <text x="320" y="132" text-anchor="middle" fill="#2997ff" font-size="13" font-weight="600">+ RFM</text>
+    <text x="320" y="158" text-anchor="middle" fill="#2997ff" font-size="24" font-weight="800">41.79</text>
+    <!-- Arrow 2 -->
+    <line x1="405" y1="140" x2="445" y2="140" stroke="#86868b" stroke-width="2" marker-end="url(#aP)"/>
+    <text x="425" y="125" text-anchor="middle" fill="#30d158" font-size="11" font-weight="600">+HAFL</text>
+    <!-- +RFM+HAFL -->
+    <rect x="450" y="100" width="185" height="80" rx="14" fill="rgba(168,85,247,0.08)" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="542" y="132" text-anchor="middle" fill="#a855f7" font-size="13" font-weight="600">+ RFM + HAFL</text>
+    <text x="542" y="158" text-anchor="middle" fill="#a855f7" font-size="24" font-weight="800">41.89</text>
+    <!-- Arrow 3 -->
+    <line x1="635" y1="140" x2="675" y2="140" stroke="#86868b" stroke-width="2" marker-end="url(#aP)"/>
+    <text x="655" y="125" text-anchor="middle" fill="#30d158" font-size="10" font-weight="600">+MFGCP</text>
+    <!-- Full model -->
+    <rect x="680" y="100" width="200" height="80" rx="14" fill="rgba(48,209,88,0.08)" stroke="#30d158" stroke-width="2" stroke-dasharray="6,4"/>
+    <text x="780" y="132" text-anchor="middle" fill="#30d158" font-size="12" font-weight="600">+ RFM+MFGCP+HAFL</text>
+    <text x="780" y="158" text-anchor="middle" fill="#ff9f0a" font-size="20" font-weight="800">训练中</text>
+    <!-- Improvement labels -->
+    <text x="320" y="210" text-anchor="middle" fill="#30d158" font-size="12">+0.08 dB</text>
+    <text x="542" y="210" text-anchor="middle" fill="#30d158" font-size="12">+0.18 dB (累计)</text>
+    <text x="780" y="210" text-anchor="middle" fill="#ff9f0a" font-size="12">预期 &gt; 42.0</text>
+    <!-- Progress bar underneath -->
+    <rect x="20" y="240" width="860" height="8" rx="4" fill="rgba(255,255,255,0.06)"/>
+    <rect x="20" y="240" width="615" height="8" rx="4" fill="url(#progGrad)"/>
+    <defs><linearGradient id="progGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#2997ff"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs>
+    <text x="640" y="270" fill="#86868b" font-size="10">已完成 3/4 实验配置</text>
+  </svg>
+</section>
+
+<!-- Slide 33: Key Number -->
+<section data-background-color="#000">
+  <p class="section-label">关键成果</p>
+  <h2 style="font-size: 1.3em;">当前最佳结果</h2>
+  <div style="margin-top: 20px;">
+    <span class="hero-number gradient-text">41.89</span>
+    <p style="font-size: 0.8em; color: #86868b; margin-top: 8px;">PSNR (dB) · Rain200L</p>
+  </div>
+  <div style="margin-top: 16px;">
+    <span class="hero-number-sm gradient-text" style="font-size: 2.2em;">+0.18 dB</span>
+    <p style="font-size: 0.7em; color: #86868b;">相比基线累计提升</p>
+  </div>
+</section>
+
+<!-- Slide 34: Analysis -->
+<section data-background-color="#000">
+  <p class="section-label">涨点分析</p>
+  <h2 style="font-size: 1.3em;">三个维度，各自独立有效</h2>
+  <div style="margin-top: 24px;">
+    <div class="cards-row">
+      <div class="card card-center">
+        <p style="color: var(--blue); font-size: 0.8em; font-weight: 600;">RFM</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">模型频域</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 2px 0 0;">+0.08 dB</p>
+      </div>
+      <div class="card card-center">
+        <p style="color: var(--purple); font-size: 0.8em; font-weight: 600;">MFGCP</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">模型空域</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 2px 0 0;">验证中</p>
+      </div>
+      <div class="card card-center">
+        <p style="color: var(--green); font-size: 0.8em; font-weight: 600;">HAFL</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">训练频域</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 2px 0 0;">+0.10 dB</p>
+      </div>
+    </div>
+  </div>
+  <p style="font-size: 0.75em; color: #a1a1a6; margin-top: 24px;">
+    预期叠加效果 <strong style="color: #f5f5f7;">&gt; 0.3 dB</strong>
+  </p>
+</section>
+
+<!-- ============ PART 6: PROGRESS & PLAN ============ -->
+
+<!-- Slide 35: Section Title -->
+<section data-background-gradient="radial-gradient(ellipse at 60% 50%, #0d1f3c 0%, #000 70%)">
+  <p class="section-label" style="color: var(--gray);">PART 05</p>
+  <h1 style="font-size: 3em; font-weight: 800;"><span class="gradient-text">进展与计划</span></h1>
+  <p style="font-size: 0.8em; color: #86868b;">从实验到论文的最后冲刺</p>
+</section>
+
+<!-- Slide 36: Completed -->
+<section data-background-color="#000">
+  <p class="section-label">PART 05 · 进展与计划</p>
+  <h2 style="font-size: 1.5em;">已完成工作</h2>
+  <div style="margin-top: 24px; max-width: 600px; margin-left: auto; margin-right: auto;">
+    <div class="timeline-item">
+      <div class="timeline-dot dot-done"></div>
+      <div>
+        <p style="color: #f5f5f7; font-size: 0.8em; font-weight: 500; margin: 0;">创新点 1 · RFM 实现与验证</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">+0.08 dB · 已确认有效</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot dot-done"></div>
+      <div>
+        <p style="color: #f5f5f7; font-size: 0.8em; font-weight: 500; margin: 0;">创新点 2 · MFGCP 实现</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">代码完成，集成训练验证中</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot dot-done"></div>
+      <div>
+        <p style="color: #f5f5f7; font-size: 0.8em; font-weight: 500; margin: 0;">创新点 3 · HAFL 实现与验证</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">+0.10 dB · 已确认有效</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot dot-done"></div>
+      <div>
+        <p style="color: #f5f5f7; font-size: 0.8em; font-weight: 500; margin: 0;">4 卡 DDP 训练加速</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">显著缩短实验迭代周期</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot dot-progress"></div>
+      <div>
+        <p style="color: #ff9f0a; font-size: 0.8em; font-weight: 500; margin: 0;">exp3（全部集成）训练中</p>
+        <p style="font-size: 0.6em; color: #86868b; margin: 4px 0 0;">RFM + MFGCP + HAFL 联合训练</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 37: Plan -->
+<section data-background-color="#000">
+  <p class="section-label">后续计划</p>
+  <h2 style="font-size: 1.5em;">下一步</h2>
+  <div style="margin-top: 24px; max-width: 600px; margin-left: auto; margin-right: auto;">
+    <div class="timeline-item">
+      <div class="timeline-dot dot-todo"></div>
+      <p style="color: #f5f5f7; font-size: 0.8em; margin: 0;">完成 exp3 全量训练<br><span style="font-size: 0.75em; color: #86868b;">预计 1–2 周</span></p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot dot-todo"></div>
+      <p style="color: #f5f5f7; font-size: 0.8em; margin: 0;">更多数据集验证<br><span style="font-size: 0.75em; color: #86868b;">Rain200H · SPA-Data · DID-Data</span></p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot dot-todo"></div>
+      <p style="color: #f5f5f7; font-size: 0.8em; margin: 0;">与 SOTA 方法全面对比<br><span style="font-size: 0.75em; color: #86868b;">Restormer · MPRNet · DeRainMamba</span></p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot dot-todo"></div>
+      <p style="color: #f5f5f7; font-size: 0.8em; margin: 0;">论文撰写<br><span style="font-size: 0.75em; color: #86868b;">整理实验数据，完成论文初稿</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 38: Summary -->
+<section data-background-gradient="radial-gradient(ellipse at 50% 40%, #0a1628 0%, #000 70%)">
+  <div style="margin-top: 60px;">
+    <p class="section-label">SUMMARY</p>
+    <h2 style="font-size: 1.8em; line-height: 1.4;">
+      从频域视角出发<br>
+      <span class="gradient-text">构建全链路去雨增强框架</span>
+    </h2>
+    <div class="divider"></div>
+    <p style="font-size: 0.8em; color: #a1a1a6; margin-top: 20px; max-width: 600px; margin-left: auto; margin-right: auto;">
+      模型频域建模 · 空域方向感知 · 训练频域约束<br>
+      三维协同，逐步验证有效
+    </p>
+  </div>
+</section>
+
+<!-- Slide 39: Thanks -->
+<section data-background-color="#000">
+  <div style="margin-top: 100px;">
+    <h1 style="font-size: 2.5em;">谢谢</h1>
+    <p style="font-size: 0.85em; color: #86868b; margin-top: 16px;">欢迎提问与讨论</p>
+  </div>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: 'c/t',
+  transition: 'none',
+  backgroundTransition: 'none',
+  center: true,
+  width: 1280,
+  height: 720,
+  margin: 0.08,
+  controlsTutorial: false,
+  progress: true,
+  history: true,
+  keyboard: true,
+  overview: true,
+  touch: true,
+});
+</script>
+</body>
+</html>

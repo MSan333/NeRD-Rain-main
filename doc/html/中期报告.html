@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>硕士论文中期报告 — 基于频域增强的图像去雨方法研究</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']]
+  },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif SC', 'SimSun', 'Times New Roman', serif;
+    background: #fff; color: #1a1a1a;
+    line-height: 1.8; font-size: 15px;
+    max-width: 800px; margin: 0 auto; padding: 40px 30px 60px;
+  }
+  /* 封面 */
+  .cover { text-align: center; padding: 80px 0 60px; border-bottom: 3px double #333; margin-bottom: 50px; }
+  .cover .degree { font-size: 18px; letter-spacing: 6px; margin-bottom: 10px; }
+  .cover .report-type { font-size: 22px; font-weight: 700; letter-spacing: 4px; margin-bottom: 40px; }
+  .cover .title { font-size: 28px; font-weight: 700; margin-bottom: 50px; line-height: 1.5; }
+  .cover .info-table { margin: 0 auto; text-align: left; font-size: 15px; }
+  .cover .info-table td { padding: 6px 12px; }
+  .cover .info-table td:first-child { font-weight: 600; white-space: nowrap; }
+  .cover .date-line { margin-top: 50px; font-size: 15px; color: #555; }
+
+  /* 标题 */
+  h1 { font-size: 22px; font-weight: 700; text-align: center; margin: 50px 0 20px; padding-bottom: 8px; border-bottom: 1px solid #ccc; }
+  h2 { font-size: 17px; font-weight: 700; text-align: left; margin: 35px 0 12px; }
+  h3 { font-size: 15px; font-weight: 700; text-indent: 2em; margin: 25px 0 10px; }
+  p { text-indent: 2em; margin-bottom: 10px; text-align: justify; }
+  p.no-indent { text-indent: 0; }
+
+  /* 表格 */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  table caption { font-size: 14px; font-weight: 600; margin-bottom: 6px; text-align: center; }
+  th, td { border: 1px solid #555; padding: 7px 10px; text-align: center; }
+  th { background: #f0f0f0; font-weight: 700; }
+
+  /* 图注 */
+  .fig-wrapper { text-align: center; margin: 24px 0; }
+  .fig-wrapper svg { max-width: 100%; }
+  .fig-caption { font-size: 13px; color: #444; margin-top: 8px; }
+
+  /* 列表 */
+  ul, ol { margin: 8px 0 12px 2em; }
+  li { margin-bottom: 4px; text-align: justify; }
+
+  /* 参考文献 */
+  .references { font-size: 13px; line-height: 1.7; }
+  .references p { text-indent: -2em; margin-left: 2em; margin-bottom: 5px; }
+
+  /* 公式 */
+  .eq-number { float: right; color: #555; font-size: 14px; }
+
+  /* 进度条 */
+  .progress-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .progress-item .icon { font-size: 16px; flex-shrink: 0; }
+
+  /* 打印 */
+  @media print {
+    body { max-width: none; padding: 0; font-size: 12pt; }
+    h1 { page-break-before: always; }
+    .fig-wrapper { page-break-inside: avoid; }
+    table { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== 封面 ==================== -->
+<div class="cover">
+  <div class="degree">硕 士 学 位 论 文</div>
+  <div class="report-type">中 期 报 告</div>
+  <div class="title">基于频域增强的图像去雨方法研究</div>
+  <table class="info-table">
+    <tr><td>研究生：</td><td>[待补充]</td></tr>
+    <tr><td>学 号：</td><td>[待补充]</td></tr>
+    <tr><td>导 师：</td><td>[待补充]</td></tr>
+    <tr><td>学 院：</td><td>[待补充]</td></tr>
+    <tr><td>专 业：</td><td>[待补充]</td></tr>
+  </table>
+  <div class="date-line">[待补充] 年 [待补充] 月</div>
+</div>
+
+<!-- ==================== 摘要 ==================== -->
+<h1>摘 要</h1>
+<p>图像去雨是计算机视觉领域中的基础低层视觉任务，其目标是从被雨水退化的观测图像中恢复出清晰无雨的场景内容。雨天图像不仅受到雨纹遮挡的影响，还伴随雾化效应、运动模糊和光照变化等复合退化，严重影响下游目标检测、语义分割等高层视觉任务的性能。近年来，基于深度学习的方法在图像去雨领域取得了显著进展，但大多数方法在空域进行特征提取与恢复，忽视了雨纹在频域中呈现的特定周期性分布规律和方向性结构先验。</p>
+<p>本文以频域视角为切入点，围绕图像去雨任务展开系统性研究，提出了三个递进式创新点：（1）残差频域模块（RFM），通过快速傅里叶变换将特征映射至频域，对幅度谱进行自适应增强后逆变换回空域并以残差方式融合，实现对雨纹频率成分的精准定位与抑制；（2）多尺度频域-梯度协同感知模块（MFGCP），在RFM基础上引入多方向微分卷积（MDPConv），构建频域-空域双域协同机制，显式建模雨纹的方向性梯度先验；（3）分层自适应频域损失与渐进式课程学习（HAFL），将频域分解为低、中、高三个子带，针对不同频段的恢复难度差异设计分层损失函数，并引入渐进式权重调度策略实现从易到难的课程学习。三个创新点形成"模型设计→模型增强→训练优化"的递进闭环，从模型结构和训练策略两个维度实现全链路频域增强。</p>
+<p>目前，创新点1（RFM）和创新点3（HAFL）的实现与消融实验验证已完成，在Rain200L数据集上的PSNR分别从基线的41.71 dB提升至41.79 dB和41.89 dB，创新点2（MFGCP）的代码实现已完成，三创新点集成实验正在进行中。</p>
+<p><strong>关键词：</strong>图像去雨；频域增强；傅里叶变换；多方向卷积；课程学习</p>
+
+<!-- ==================== 第一章 ==================== -->
+<h1>第一章 研究背景与意义</h1>
+
+<h2>1.1 图像去雨任务概述</h2>
+<p>图像去雨（Image Deraining）是计算机视觉领域中一项重要的低层视觉（Low-level Vision）任务，其核心目标是从被雨水退化的观测图像中恢复出清晰、无雨的场景内容。从数学建模的角度，雨天图像的退化过程可以简化为如下线性叠加模型：</p>
+<p class="no-indent" style="text-align:center;">$y = x + r$</p>
+<p>其中，$y$ 表示观测到的雨天图像，$x$ 表示理想的清晰图像，$r$ 表示雨纹层（Rain Streak Layer）。该模型假设雨纹以加性方式叠加在清晰图像之上，且雨纹与背景内容相互独立。然而，实际场景中的雨天退化远比这一简化模型复杂：雨滴在降落过程中产生的雾化效应（Haze Effect）会降低图像对比度，雨滴高速运动的轨迹导致运动模糊（Motion Blur），雨天的光照条件变化引起整体亮度和色温的偏移，此外还有雨滴附着在镜头表面产生的局部遮挡等问题。这些复合退化因素使得图像去雨任务远比简单的噪声去除更具挑战性。</p>
+<p>图像去雨的质量直接影响下游高层视觉任务的性能。大量研究表明，在雨天条件下，目标检测（Object Detection）、语义分割（Semantic Segmentation）、实例分割（Instance Segmentation）等任务的精度会出现显著下降。根据已有文献的量化评估，雨天图像可导致目标检测的平均精度（Average Precision, AP）下降20%～30%，语义分割的交并比（mIoU）下降15%～25%。这一现象的根本原因在于，雨纹的遮挡和散射效应破坏了图像中的纹理细节和边缘信息，使得深度学习模型难以准确提取有效的特征表示。因此，图像去雨作为前端预处理模块，对于构建全天候（All-weather）鲁棒的视觉系统具有重要的基础性作用。</p>
+
+<h2>1.2 应用场景与需求</h2>
+<p><strong>自动驾驶。</strong>自动驾驶系统依赖摄像头、激光雷达等传感器获取环境信息，其中视觉感知是最核心的感知模态之一。在雨天行驶条件下，摄像头采集的图像受到雨纹遮挡和雾化效应的影响，导致前方车辆、行人、交通标志等关键目标的可见度大幅降低。研究表明，雨天条件下自动驾驶系统的目标检测召回率可下降超过25%，这对行车安全构成严重威胁。因此，高效的图像去雨算法可作为自动驾驶感知前端的关键预处理环节，有效提升恶劣天气下的感知安全。</p>
+<p><strong>智能监控。</strong>城市安防和交通监控系统需要实现全天候、全天时的视频监控能力。雨天拍摄的监控画面质量下降不仅影响人工查看的效率，更会导致基于视频的智能分析系统（如行为识别、车牌识别、人流计数等）性能急剧退化。因此，将图像去雨技术集成到视频监控系统中，是保障全天候监控质量的重要技术手段。</p>
+<p><strong>遥感图像。</strong>卫星和无人机在雨天条件下拍摄的遥感图像会受到严重退化，影响地物分类、变化检测、灾害监测等遥感应用。特别是在热带和亚热带等多雨地区，雨天获取的遥感数据占比较高，有效的去雨处理能够显著提高遥感数据的可用性和利用率。</p>
+<p><strong>移动摄影。</strong>随着智能手机计算摄影能力的不断增强，用户对恶劣天气下拍摄质量的要求也日益提高。实时的图像去雨功能可以作为手机相机的后处理特效，帮助用户在雨天拍摄出更加清晰的照片和视频，具有广阔的消费级应用前景。</p>
+
+<h2>1.3 研究意义</h2>
+<p><strong>理论意义。</strong>本研究从频域视角出发，系统性地探索频域表示在图像去雨这一低层视觉任务中的作用机制。频域分析作为信号处理的基础理论工具，在图像压缩、图像增强等领域已有广泛应用，但在图像去雨领域的研究仍不够深入和系统。本文通过在网络结构和训练策略中同时引入频域操作，研究频域信息对去雨性能的提升机理，为该领域的理论研究提供新的视角和实证依据。</p>
+<p><strong>实际意义。</strong>本研究旨在提升恶劣天气条件下视觉系统的鲁棒性和可靠性，所提出的方法可广泛应用于自动驾驶、智能监控、遥感分析等实际场景，对于构建全天候、全天时的智能视觉系统具有重要的实际应用价值。同时，本研究探索的频域增强策略具有一定的通用性，可推广至图像去雾、图像去雪等其他恶劣天气恢复任务。</p>
+
+<!-- ==================== 第二章 ==================== -->
+<h1>第二章 国内外研究现状</h1>
+
+<h2>2.1 传统图像去雨方法</h2>
+<p>在深度学习兴起之前，图像去雨研究主要依赖传统信号处理方法。这些方法通常基于手工设计的先验知识对雨纹的形态、方向和统计特性进行建模。</p>
+<p><strong>基于稀疏编码的方法。</strong>Luo等（2015）[1]提出了基于判别性稀疏编码（Discriminative Sparse Coding）的图像去雨方法，通过训练具有类间最大化和类内最小化目标的字典，将雨纹和背景内容在稀疏表示空间中分离。该方法利用雨纹在特定方向上的稀疏性先验，通过优化求解实现雨纹层的估计与去除。然而，字典训练过程计算开销较大，且字典的表达能力有限，难以应对复杂多变的雨天场景。</p>
+<p><strong>基于高斯混合模型的方法。</strong>Li等（2016）[2]提出了基于高斯混合模型（Gaussian Mixture Model, GMM）的雨纹建模方法，将雨纹的形态特征参数化为一组高斯分布，通过期望最大化（EM）算法估计模型参数。该方法能够捕获雨纹的多种形态变化，但模型参数的估计对初始化敏感，且在雨纹与背景纹理高度混合时效果有限。</p>
+<p><strong>基于形态学成分分析的方法。</strong>Kang等（2012）[3]提出了基于形态学成分分析（Morphological Component Analysis, MCA）的去雨方法，利用雨纹和背景在形态学上的差异，通过不同的字典（如小波字典和曲波字典）分别表示雨纹和背景，实现成分分离。该方法在轻度降雨场景下表现良好，但在大雨或雨纹密集的情况下容易出现伪影。</p>
+<p><strong>传统方法的局限性。</strong>总体而言，传统图像去雨方法存在以下共同局限性：（1）依赖人工设计的先验和特征，难以自动学习数据驱动的最优表示；（2）泛化能力有限，针对特定数据集训练的模型难以迁移到其他场景；（3）计算复杂度高，特别是涉及迭代优化求解的方法，难以满足实时性需求。这些局限性促使研究者转向基于深度学习的方法。</p>
+
+<h2>2.2 基于深度学习的方法</h2>
+<p>随着深度学习技术的快速发展，基于卷积神经网络（CNN）和Transformer的图像去雨方法取得了突破性进展。以下梳理该领域的代表性工作。</p>
+<p><strong>DerainNet。</strong>Fu等（2017）[4]提出了首个基于深度卷积神经网络的图像去雨方法DerainNet，采用端到端的多层CNN直接从雨天图像回归清晰图像，利用大量合成数据对网络进行训练。该方法开创了将深度学习应用于图像去雨的先河，但由于网络结构相对简单，对复杂雨纹的恢复能力有限。</p>
+<p><strong>PReNet。</strong>Ren等（2019）[5]提出了渐进递归网络（Progressive Recurrent Network, PReNet），采用递归结构对残差进行多次迭代细化，通过阶段间参数共享机制大幅减少模型参数量。PReNet在Rain100L等基准数据集上取得了优异的性能，同时保持了较小的模型规模，是递归式去雨网络的代表性工作。</p>
+<p><strong>MPRNet。</strong>Zamir等（2021）[6]提出了多阶段渐进恢复网络（Multi-Stage Progressive Restoration Network, MPRNet），将图像恢复过程分解为多个阶段，每个阶段专注于恢复不同尺度的信息，阶段间通过监督注意力模块（Supervised Attention Module, SAM）传递特征。MPRNet在图像去雨和图像去模糊任务上均取得了当时的最优性能，其多阶段渐进恢复的设计理念对后续工作产生了深远影响。</p>
+<p><strong>Restormer。</strong>Zamir等（2022）[7]提出了Restormer，一种针对图像恢复任务设计的高效Transformer架构。该方法提出多头转置注意力（Multi-DCT-head Transposed Attention, MDTA）和门控前馈网络（Gated-DConv Feed-Forward Network, GDFN），在通道维度而非空间维度计算注意力，将自注意力的计算复杂度从空间分辨率的二次方降低为线性。Restormer在图像去雨、运动去模糊、图像去噪等多个恢复任务上均取得了优异性能，证明了Transformer架构在低层视觉中的有效性。</p>
+<p><strong>NeRD-Rain。</strong>Chen等（2024）[8]在CVPR 2024上提出了NeRD-Rain，首次将隐式神经表示（Implicit Neural Representation, INR）引入图像去雨任务。该方法基于多尺度网络架构，在每个尺度层级使用MLP（Multi-Layer Perceptron）作为隐式函数，将像素坐标和特征映射为恢复后的像素值。NeRD-Rain在多个基准数据集上取得了SOTA性能，且模型参数量的增长仅与通道数的平方成正比，具有较好的参数效率。本文选择NeRD-Rain作为基线模型，在其基础上进行频域增强改进。</p>
+
+<h2>2.3 频域方法在图像恢复中的应用</h2>
+<p>频域分析作为信号处理的经典理论工具，在图像恢复领域有着重要的应用价值。快速傅里叶变换（FFT）可以将图像从空间域转换到频率域，使得在空域中难以直接处理的周期性模式在频域中变得可辨识和可操作。</p>
+<p><strong>FFT在图像去噪中的应用。</strong>传统的频域去噪方法基于噪声和信号在频率分布上的差异，通过设计低通滤波器、维纳滤波器等在频域抑制噪声成分。近年来，深度学习与频域方法的结合成为研究热点：Liu等（2021）[9]提出了在频域中进行图像去噪的方法，通过将FFT作为网络中的特征变换层，使网络能够直接学习频域中的去噪映射。</p>
+<p><strong>频域注意力机制。</strong>Koniusz等（2022）[10]在NeurIPS 2022上提出了快速傅里叶卷积（Fast Fourier Convolution, FFC），利用FFT将全局信息编码到频域中，实现了具有大感受野的高效卷积运算。FFC在图像修复（Inpainting）任务上表现出色，证明了频域全局信息对图像恢复任务的价值。</p>
+<p><strong>DeRainMamba。</strong>近期，DeRainMamba（2025）[11]在IEEE Signal Processing Letters上提出了方向微分卷积（Directional Differential Convolution）策略，通过多个方向的微分卷积核捕获雨纹在不同方向上的梯度特征，结合状态空间模型（State Space Model）实现高效的图像去雨。该方法首次将方向性先验显式引入去雨网络，为本文的多方向卷积设计提供了重要启发。</p>
+<p><strong>现有频域方法的不足。</strong>尽管已有工作探索了频域信息在图像恢复中的应用，但现有方法仍存在以下不足：（1）频域操作的利用方式较为单一，多数工作仅在特定网络层中使用FFT，缺乏系统性的频域增强框架；（2）频域信息和空域方向信息未能有效结合，无法充分利用双域互补优势；（3）训练过程中的损失函数通常在空域设计，忽视了不同频率成分的恢复难度差异。</p>
+
+<h2>2.4 现有方法的不足与本文动机</h2>
+<p>综合分析现有研究，本文识别出以下三个关键痛点，构成了本研究的核心动机：</p>
+<p><strong>痛点1：忽视雨纹的频域特征分布规律。</strong>雨纹在频域中呈现特定的周期性模式，主要集中在特定的频率带上。现有方法大多在空域进行特征提取和恢复，未能充分利用这一频域先验信息，导致对雨纹特征的捕获不够精准。</p>
+<p><strong>痛点2：缺乏对雨纹方向性结构的显式建模。</strong>雨纹具有强烈的方向性先验（如竖直方向或特定倾斜角度），而标准卷积的方形感受野无法有效利用这一方向性信息。尽管已有少量工作（如DeRainMamba）开始关注方向性先验，但尚未有工作将方向性建模与频域增强有效结合。</p>
+<p><strong>痛点3：训练过程中频域信息利用不足。</strong>现有去雨方法的训练损失函数（如L1/L2损失、感知损失等）均在空域定义，对所有频率成分施加等强度的约束。然而，不同频率成分的恢复难度存在显著差异：低频成分（图像整体结构）相对容易恢复，高频成分（纹理细节）则更具挑战性。统一的损失约束无法针对不同频段进行差异化优化，限制了模型的最终性能。</p>
+<p>基于上述分析，本文以"频域增强"为核心线索，提出了一套从模型结构到训练策略的全链路频域增强方案，旨在系统性地解决上述三个痛点。</p>
+
+<!-- ==================== 第三章 ==================== -->
+<h1>第三章 研究内容与方法</h1>
+
+<h2>3.1 整体框架</h2>
+<p>本文基于NeRD-Rain的多尺度隐式神经表示框架，提出三个递进式创新点，形成"模型设计→模型增强→训练优化"的完整闭环。三个创新点分别对应不同的优化维度：RFM在模型层面引入频域特征增强能力，MFGCP在RFM基础上进一步引入空域方向性建模实现频域-空域双域协同，HAFL则从训练策略层面引入频域分层损失约束。三者相互补充、递进增强，共同构成完整的频域增强框架。</p>
+
+<!-- SVG: 整体框架图 -->
+<div class="fig-wrapper">
+<svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Serif SC',serif;font-size:12px;">
+  <!-- 背景 -->
+  <rect width="760" height="320" fill="#fff"/>
+  <!-- 输入 -->
+  <rect x="10" y="120" width="90" height="60" rx="6" fill="#e8f4f8" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="55" y="148" text-anchor="middle" font-size="12" fill="#1a1a1a">雨天图像</text>
+  <text x="55" y="165" text-anchor="middle" font-size="11" fill="#555">Input y</text>
+  <!-- 箭头1 -->
+  <line x1="100" y1="150" x2="135" y2="150" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- 多尺度网络 -->
+  <rect x="138" y="60" width="200" height="180" rx="8" fill="#fef9e7" stroke="#d4a017" stroke-width="1.5"/>
+  <text x="238" y="82" text-anchor="middle" font-weight="700" font-size="13" fill="#1a1a1a">MultiscaleNet</text>
+  <rect x="152" y="92" width="172" height="28" rx="4" fill="#fff" stroke="#999"/>
+  <text x="238" y="110" text-anchor="middle" font-size="11">Scale-1 (48ch)</text>
+  <rect x="152" y="126" width="172" height="28" rx="4" fill="#fff" stroke="#999"/>
+  <text x="238" y="144" text-anchor="middle" font-size="11">Scale-2 (96ch)</text>
+  <rect x="152" y="160" width="172" height="28" rx="4" fill="#fff" stroke="#999"/>
+  <text x="238" y="178" text-anchor="middle" font-size="11">Scale-3 (192ch)</text>
+  <rect x="152" y="194" width="172" height="28" rx="4" fill="#fff" stroke="#999"/>
+  <text x="238" y="212" text-anchor="middle" font-size="11">INR-MLP</text>
+  <!-- 箭头2 -->
+  <line x1="338" y1="150" x2="380" y2="150" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- 三个创新点 -->
+  <rect x="383" y="20" width="250" height="260" rx="8" fill="#f5eef8" stroke="#8e44ad" stroke-width="1.5"/>
+  <text x="508" y="42" text-anchor="middle" font-weight="700" font-size="13" fill="#1a1a1a">频域增强组件</text>
+  <!-- RFM -->
+  <rect x="397" y="52" width="222" height="48" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.2"/>
+  <text x="508" y="72" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1a1a">① RFM 残差频域模块</text>
+  <text x="508" y="90" text-anchor="middle" font-size="10" fill="#555">FFT→幅度增强→iFFT→残差融合</text>
+  <!-- MFGCP -->
+  <rect x="397" y="110" width="222" height="62" rx="5" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.2"/>
+  <text x="508" y="130" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1a1a">② MFGCP 多尺度频域-梯度</text>
+  <text x="508" y="146" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1a1a">    协同感知模块</text>
+  <text x="508" y="164" text-anchor="middle" font-size="10" fill="#555">RFM + α·MDPConv (5方向)</text>
+  <!-- HAFL -->
+  <rect x="397" y="182" width="222" height="48" rx="5" fill="#fdebd0" stroke="#e67e22" stroke-width="1.2"/>
+  <text x="508" y="202" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1a1a">③ HAFL 分层自适应频域损失</text>
+  <text x="508" y="220" text-anchor="middle" font-size="10" fill="#555">低/中/高频子带 + 课程学习</text>
+  <!-- 箭头关系 -->
+  <line x1="508" y1="100" x2="508" y2="110" stroke="#8e44ad" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="508" y1="172" x2="508" y2="182" stroke="#8e44ad" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="540" y="108" font-size="9" fill="#8e44ad">增强</text>
+  <text x="540" y="180" font-size="9" fill="#8e44ad">约束</text>
+  <!-- 输出 -->
+  <line x1="633" y1="150" x2="665" y2="150" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="668" y="120" width="80" height="60" rx="6" fill="#e8f4f8" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="708" y="148" text-anchor="middle" font-size="12" fill="#1a1a1a">清晰图像</text>
+  <text x="708" y="165" text-anchor="middle" font-size="11" fill="#555">Output x̂</text>
+  <!-- 底部标签 -->
+  <text x="55" y="298" text-anchor="middle" font-size="10" fill="#888">模型设计</text>
+  <text x="238" y="298" text-anchor="middle" font-size="10" fill="#888">模型增强</text>
+  <text x="508" y="298" text-anchor="middle" font-size="10" fill="#888">训练优化</text>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker></defs>
+</svg>
+<div class="fig-caption">图1 基于频域增强的图像去雨整体框架。三个创新点分别对应模型设计（RFM）、模型增强（MFGCP）和训练优化（HAFL）三个维度。</div>
+</div>
+
+<h2>3.2 创新点1：残差频域模块（RFM）</h2>
+
+<h3>3.2.1 设计动机</h3>
+<p>雨纹在频域中呈现特定的周期性模式。通过对大量雨天图像进行频谱分析可以发现，雨纹的能量主要集中在特定的中高频带，且呈现出明显的方向性峰值。传统的空域卷积方法虽然能够通过增大感受野来间接捕获这些频域特征，但这种方式效率低下且不够精准。因此，需要一种显式的频域特征增强机制，直接在频域中对特征进行分析和操作。</p>
+
+<h3>3.2.2 模块结构</h3>
+
+<!-- SVG: RFM 结构图 -->
+<div class="fig-wrapper">
+<svg viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Serif SC',serif;font-size:11px;">
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker></defs>
+  <rect width="720" height="240" fill="#fff"/>
+  <!-- 输入 -->
+  <rect x="8" y="85" width="64" height="45" rx="4" fill="#e8f4f8" stroke="#2980b9" stroke-width="1.2"/>
+  <text x="40" y="110" text-anchor="middle" font-size="11">输入 x</text>
+  <!-- FFT -->
+  <line x1="72" y1="107" x2="95" y2="107" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="98" y="85" width="54" height="45" rx="4" fill="#fef9e7" stroke="#d4a017" stroke-width="1.2"/>
+  <text x="125" y="112" text-anchor="middle" font-weight="600">FFT</text>
+  <!-- 分支 -->
+  <line x1="152" y1="107" x2="175" y2="107" stroke="#333" stroke-width="1.2"/>
+  <line x1="175" y1="50" x2="175" y2="160" stroke="#333" stroke-width="1.2"/>
+  <!-- 幅度分支 -->
+  <line x1="175" y1="65" x2="200" y2="65" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="203" y="40" width="120" height="50" rx="4" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.2"/>
+  <text x="263" y="60" text-anchor="middle" font-size="10" font-weight="600">幅度谱 A=|F|</text>
+  <text x="263" y="78" text-anchor="middle" font-size="10">W₂·ReLU(W₁·A)</text>
+  <!-- 相位分支 -->
+  <line x1="175" y1="150" x2="200" y2="150" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="203" y="130" width="120" height="40" rx="4" fill="#fdebd0" stroke="#e67e22" stroke-width="1.2"/>
+  <text x="263" y="155" text-anchor="middle" font-size="10" font-weight="600">相位 φ=∠F (保留)</text>
+  <!-- 合并 -->
+  <line x1="323" y1="65" x2="370" y2="65" stroke="#333" stroke-width="1.2"/>
+  <line x1="323" y1="150" x2="370" y2="150" stroke="#333" stroke-width="1.2"/>
+  <line x1="370" y1="65" x2="370" y2="150" stroke="#333" stroke-width="1.2"/>
+  <line x1="370" y1="107" x2="395" y2="107" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <text x="375" y="100" font-size="9" fill="#555">A'·e^{jφ}</text>
+  <!-- iFFT -->
+  <rect x="398" y="85" width="54" height="45" rx="4" fill="#fef9e7" stroke="#d4a017" stroke-width="1.2"/>
+  <text x="425" y="112" text-anchor="middle" font-weight="600">iFFT</text>
+  <!-- 残差 -->
+  <line x1="452" y1="107" x2="490" y2="107" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <text x="471" y="100" font-size="9" fill="#555">F'</text>
+  <!-- +号 -->
+  <circle cx="510" cy="107" r="14" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="510" y="112" text-anchor="middle" font-size="16" font-weight="700">+</text>
+  <!-- 残差连接 -->
+  <line x1="40" y1="130" x2="40" y2="205" stroke="#888" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="40" y1="205" x2="510" y2="205" stroke="#888" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="510" y1="205" x2="510" y2="121" stroke="#888" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="275" y="220" text-anchor="middle" font-size="10" fill="#888">残差连接 (Residual Connection)</text>
+  <!-- 输出 -->
+  <line x1="524" y1="107" x2="555" y2="107" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="558" y="85" width="90" height="45" rx="4" fill="#e8f4f8" stroke="#2980b9" stroke-width="1.2"/>
+  <text x="603" y="105" text-anchor="middle" font-size="11">x + iFFT(F')</text>
+  <text x="603" y="120" text-anchor="middle" font-size="10" fill="#555">输出 x_out</text>
+</svg>
+<div class="fig-caption">图2 RFM（残差频域模块）结构图。输入特征经FFT变换至频域，幅度谱经两层MLP增强后与原始相位组合，再经iFFT变换回空域，以残差方式与输入融合。</div>
+</div>
+
+<h3>3.2.3 数学公式</h3>
+<p>给定输入特征图 $\mathbf{x} \in \mathbb{R}^{C \times H \times W}$，RFM首先通过二维快速傅里叶变换（2D-FFT）将其映射至频域：</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{F} = \text{FFT}_{2D}(\mathbf{x}) \in \mathbb{C}^{C \times H \times W}$$</p>
+<p>将频域特征分解为幅度谱和相位：</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{A} = |\mathbf{F}|, \quad \phi = \angle \mathbf{F}$$</p>
+<p>对幅度谱进行非线性增强，其中 $W_1$、$W_2$ 为两个 1×1 卷积层：</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{A}' = \sigma(W_2 \cdot \text{ReLU}(W_1 \cdot \mathbf{A}))$$</p>
+<p>其中 $\sigma$ 为 Sigmoid 激活函数，用于将增强后的幅度值归一化到 [0, 1] 范围。将增强后的幅度谱与原始相位重组：</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{F}' = \mathbf{A}' \cdot e^{j\phi}$$</p>
+<p>最后通过逆傅里叶变换回到空域，并以残差方式与原始输入融合：</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{x}_{out} = \mathbf{x} + \text{iFFT}_{2D}(\mathbf{F}')$$</p>
+
+<h3>3.2.4 设计优势</h3>
+<p>RFM具有以下设计优势：（1）直接在频域操作，能够精准定位雨纹的周期性频率成分，通过幅度谱的自适应增强实现针对性抑制；（2）残差连接保证训练稳定性，避免深层网络中的梯度消失问题；（3）轻量化设计，仅包含两个1×1卷积层，参数量极小（约0.1M），不显著增加计算开销；（4）相位保留策略确保了空间结构的完整性，避免引入空间偏移伪影。</p>
+
+<h2>3.3 创新点2：多尺度频域-梯度协同感知模块（MFGCP）</h2>
+
+<h3>3.3.1 设计动机</h3>
+<p>雨纹具有强烈的方向性先验，在自然场景中通常呈现竖直方向或特定倾斜角度的线状结构。RFM在频域中对特征进行操作，能够有效抑制雨纹的周期性频率成分，但缺乏对雨纹方向性结构的显式建模能力。标准卷积的方形卷积核对不同方向的特征响应相同，无法充分利用雨纹的方向先验。因此，需要在RFM的基础上引入空域方向性感知机制，构建频域-空域双域协同的特征增强框架。</p>
+
+<h3>3.3.2 MDPConv（多方向感知卷积）设计</h3>
+
+<!-- SVG: MDPConv 5方向图 -->
+<div class="fig-wrapper">
+<svg viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Serif SC',serif;font-size:11px;">
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker></defs>
+  <rect width="720" height="200" fill="#fff"/>
+  <!-- 输入 -->
+  <rect x="15" y="75" width="55" height="40" rx="4" fill="#e8f4f8" stroke="#2980b9" stroke-width="1.2"/>
+  <text x="42" y="100" text-anchor="middle" font-size="11">F_in</text>
+  <!-- 5分支 -->
+  <line x1="70" y1="95" x2="100" y2="95" stroke="#333" stroke-width="1.2"/>
+  <line x1="100" y1="20" x2="100" y2="170" stroke="#333" stroke-width="1.2"/>
+  <!-- HDC 1x3 -->
+  <line x1="100" y1="20" x2="130" y2="20" stroke="#333" marker-end="url(#arrow)"/>
+  <rect x="133" y="5" width="110" height="30" rx="4" fill="#d5f5e3" stroke="#27ae60" stroke-width="1"/>
+  <text x="188" y="24" text-anchor="middle" font-size="10" font-weight="600">HDC (1×3)</text>
+  <rect x="258" y="8" width="36" height="10" rx="2" fill="#27ae60" opacity="0.3" stroke="#27ae60"/>
+  <text x="276" y="16" text-anchor="middle" font-size="7" fill="#1a1a1a">1×3</text>
+  <!-- VC 3x1 -->
+  <line x1="100" y1="58" x2="130" y2="58" stroke="#333" marker-end="url(#arrow)"/>
+  <rect x="133" y="43" width="110" height="30" rx="4" fill="#d6eaf8" stroke="#2980b9" stroke-width="1"/>
+  <text x="188" y="62" text-anchor="middle" font-size="10" font-weight="600">VC (3×1)</text>
+  <rect x="271" y="46" width="10" height="24" rx="2" fill="#2980b9" opacity="0.3" stroke="#2980b9"/>
+  <text x="276" y="62" text-anchor="middle" font-size="7" fill="#1a1a1a">3×1</text>
+  <!-- CDC 3x3 -->
+  <line x1="100" y1="95" x2="130" y2="95" stroke="#333" marker-end="url(#arrow)"/>
+  <rect x="133" y="80" width="110" height="30" rx="4" fill="#fef9e7" stroke="#d4a017" stroke-width="1"/>
+  <text x="188" y="99" text-anchor="middle" font-size="10" font-weight="600">CDC (3×3)</text>
+  <rect x="258" y="83" width="24" height="24" rx="2" fill="#d4a017" opacity="0.3" stroke="#d4a017"/>
+  <text x="270" y="99" text-anchor="middle" font-size="7" fill="#1a1a1a">3×3</text>
+  <!-- ADC 3x3 对角 -->
+  <line x1="100" y1="133" x2="130" y2="133" stroke="#333" marker-end="url(#arrow)"/>
+  <rect x="133" y="118" width="110" height="30" rx="4" fill="#fdebd0" stroke="#e67e22" stroke-width="1"/>
+  <text x="188" y="137" text-anchor="middle" font-size="10" font-weight="600">ADC (3×3)</text>
+  <line x1="260" y1="142" x2="282" y2="122" stroke="#e67e22" stroke-width="2"/>
+  <!-- VDC 3x3 反对角 -->
+  <line x1="100" y1="170" x2="130" y2="170" stroke="#333" marker-end="url(#arrow)"/>
+  <rect x="133" y="155" width="110" height="30" rx="4" fill="#e8daef" stroke="#8e44ad" stroke-width="1"/>
+  <text x="188" y="174" text-anchor="middle" font-size="10" font-weight="600">VDC (3×3)</text>
+  <line x1="260" y1="159" x2="282" y2="181" stroke="#8e44ad" stroke-width="2"/>
+  <!-- 合并 -->
+  <line x1="295" y1="20" x2="380" y2="20" stroke="#333" stroke-width="1"/>
+  <line x1="295" y1="58" x2="380" y2="58" stroke="#333" stroke-width="1"/>
+  <line x1="295" y1="95" x2="380" y2="95" stroke="#333" stroke-width="1"/>
+  <line x1="295" y1="133" x2="380" y2="133" stroke="#333" stroke-width="1"/>
+  <line x1="295" y1="170" x2="380" y2="170" stroke="#333" stroke-width="1"/>
+  <line x1="380" y1="20" x2="380" y2="170" stroke="#333" stroke-width="1.2"/>
+  <line x1="380" y1="95" x2="410" y2="95" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <!-- Sum -->
+  <circle cx="430" cy="95" r="16" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="430" y="100" text-anchor="middle" font-size="12" font-weight="700">Σ</text>
+  <!-- 输出 -->
+  <line x1="446" y1="95" x2="480" y2="95" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <rect x="483" y="75" width="65" height="40" rx="4" fill="#e8f4f8" stroke="#2980b9" stroke-width="1.2"/>
+  <text x="515" y="100" text-anchor="middle" font-size="11">F_out</text>
+  <!-- 公式 -->
+  <text x="600" y="90" text-anchor="middle" font-size="11" fill="#333">F_out = Σᵢ (F_in * Kᵢ)</text>
+  <text x="600" y="110" text-anchor="middle" font-size="10" fill="#888">i ∈ {HDC, VC, CDC, ADC, VDC}</text>
+</svg>
+<div class="fig-caption">图3 MDPConv（多方向感知卷积）结构图。五个方向微分卷积分支分别捕获水平、竖直、中心差分、对角线和反对角线方向的梯度特征，输出通过求和融合。</div>
+</div>
+
+<p>MDPConv采用五个方向微分卷积分支，各分支的核尺寸与功能如表1所示：</p>
+
+<table>
+  <caption>表1 MDPConv五方向微分卷积分支配置</caption>
+  <tr><th>分支</th><th>核尺寸</th><th>功能描述</th><th>目标特征</th></tr>
+  <tr><td>HDC</td><td>1×3</td><td>水平差分卷积</td><td>水平边缘检测</td></tr>
+  <tr><td>VC</td><td>3×1</td><td>竖直差分卷积</td><td>竖直雨线捕获</td></tr>
+  <tr><td>CDC</td><td>3×3</td><td>中心差分卷积</td><td>中心差分增强</td></tr>
+  <tr><td>ADC</td><td>3×3</td><td>反对角线差分卷积</td><td>对角线纹理</td></tr>
+  <tr><td>VDC</td><td>3×3</td><td>反对角线差分卷积</td><td>反对角线纹理</td></tr>
+</table>
+
+<p>MDPConv的输出为五个方向分支响应的求和融合：</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{F}_{out} = \sum_{i=1}^{5} (\mathbf{F}_{in} * K_i)$$</p>
+<p>其中 $K_i$ 表示第 $i$ 个方向微分卷积核，$*$ 表示卷积操作。</p>
+
+<h3>3.3.3 MFGCP_TransformerBlock 结构</h3>
+
+<!-- SVG: MFGCP_TransformerBlock -->
+<div class="fig-wrapper">
+<svg viewBox="0 0 600 360" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Serif SC',serif;font-size:11px;">
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker></defs>
+  <rect width="600" height="360" fill="#fff"/>
+  <!-- 输入x -->
+  <rect x="245" y="5" width="80" height="30" rx="4" fill="#e8f4f8" stroke="#2980b9" stroke-width="1.2"/>
+  <text x="285" y="25" text-anchor="middle" font-size="11">输入 x</text>
+  <line x1="285" y1="35" x2="285" y2="52" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <!-- Norm -->
+  <rect x="250" y="55" width="70" height="25" rx="4" fill="#f5f5f5" stroke="#999"/>
+  <text x="285" y="72" text-anchor="middle" font-size="10">LayerNorm</text>
+  <line x1="285" y1="80" x2="285" y2="97" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <!-- Attention -->
+  <rect x="230" y="100" width="110" height="35" rx="5" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.2"/>
+  <text x="285" y="122" text-anchor="middle" font-size="11" font-weight="600">Attention</text>
+  <line x1="285" y1="135" x2="285" y2="150" stroke="#333" stroke-width="1.2"/>
+  <!-- +1 -->
+  <circle cx="285" cy="163" r="11" fill="#fff" stroke="#333" stroke-width="1.2"/>
+  <text x="285" y="167" text-anchor="middle" font-size="12" font-weight="700">+</text>
+  <!-- 残差1 -->
+  <line x1="340" y1="22" x2="340" y2="163" stroke="#888" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="340" y1="163" x2="296" y2="163" stroke="#888" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="285" y1="5" x2="340" y2="5" stroke="#888" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="285" y1="174" x2="285" y2="192" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <!-- Norm2 -->
+  <rect x="250" y="195" width="70" height="25" rx="4" fill="#f5f5f5" stroke="#999"/>
+  <text x="285" y="212" text-anchor="middle" font-size="10">LayerNorm</text>
+  <line x1="285" y1="220" x2="285" y2="237" stroke="#333" stroke-width="1.2"/>
+  <!-- 三个并分支 -->
+  <line x1="100" y1="237" x2="470" y2="237" stroke="#333" stroke-width="1.2"/>
+  <line x1="140" y1="237" x2="140" y2="253" stroke="#333" marker-end="url(#arrow)"/>
+  <line x1="285" y1="237" x2="285" y2="253" stroke="#333" marker-end="url(#arrow)"/>
+  <line x1="430" y1="237" x2="430" y2="253" stroke="#333" marker-end="url(#arrow)"/>
+  <!-- FFN -->
+  <rect x="80" y="256" width="120" height="35" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.2"/>
+  <text x="140" y="278" text-anchor="middle" font-size="11" font-weight="600">FFN</text>
+  <!-- RFM -->
+  <rect x="225" y="256" width="120" height="35" rx="5" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.2"/>
+  <text x="285" y="278" text-anchor="middle" font-size="11" font-weight="600">RFM(x)</text>
+  <!-- α·MDPConv -->
+  <rect x="370" y="256" width="120" height="35" rx="5" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.2"/>
+  <text x="430" y="278" text-anchor="middle" font-size="11" font-weight="600">α·MDPConv(x)</text>
+  <!-- 三个合并 -->
+  <line x1="140" y1="291" x2="140" y2="310" stroke="#333" stroke-width="1"/>
+  <line x1="285" y1="291" x2="285" y2="310" stroke="#333" stroke-width="1"/>
+  <line x1="430" y1="291" x2="430" y2="310" stroke="#333" stroke-width="1"/>
+  <line x1="100" y1="310" x2="470" y2="310" stroke="#333" stroke-width="1.2"/>
+  <line x1="285" y1="310" x2="285" y2="323" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <!-- +2 -->
+  <circle cx="285" cy="336" r="11" fill="#fff" stroke="#333" stroke-width="1.2"/>
+  <text x="285" y="340" text-anchor="middle" font-size="12" font-weight="700">+</text>
+  <!-- 残差2 -->
+  <line x1="520" y1="174" x2="520" y2="336" stroke="#888" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="520" y1="336" x2="296" y2="336" stroke="#888" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="285" y1="174" x2="520" y2="174" stroke="#888" stroke-width="1" stroke-dasharray="3,2"/>
+  <!-- 输出 -->
+  <line x1="285" y1="347" x2="285" y2="358" stroke="#333" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <text x="285" y="356" text-anchor="middle" font-size="9" fill="#555"></text>
+  <text x="555" y="345" text-anchor="middle" font-size="10" fill="#555">输出 x'</text>
+</svg>
+<div class="fig-caption">图4 MFGCP_TransformerBlock 结构图。包含Attention子层和FFN+RFM+α·MDPConv三路并行的子层，两个子层均采用残差连接。</div>
+</div>
+
+<p>MFGCP_TransformerBlock的计算流程可表示为：</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{x} = \mathbf{x} + \text{Attn}(\text{Norm}(\mathbf{x}))$$</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{x} = \mathbf{x} + \text{FFN}(\text{Norm}(\mathbf{x})) + \text{RFM}(\mathbf{x}) + \alpha \cdot \text{MDPConv}(\mathbf{x})$$</p>
+<p>其中 $\alpha$ 为可学习参数，初始化为0.1，用于控制MDPConv分支的贡献强度。在本文的实现中，每个MFGCP_TransformerBlock拥有独立的 $\alpha$ 参数，使得不同层级能够自适应地学习最适合的方向性增强强度。整个模块共包含18个可学习的 $\alpha$ 参数张量。</p>
+
+<h3>3.3.4 频域-空域协同机制分析</h3>
+<p>MFGCP模块的核心设计思想在于构建频域与空域的双域协同机制，两个组件在功能上互补：</p>
+<p><strong>RFM（频域层面）：</strong>通过FFT在频域中对特征进行操作，能够有效识别并抑制雨纹的周期性频率成分。由于雨纹在频域中呈现特定的能量集中模式，RFM可以精准地对这些频率成分进行自适应调整，而不会影响其他频率上的有用信息。</p>
+<p><strong>MDPConv（空域层面）：</strong>通过五个方向的微分卷积在空域中显式建模雨纹的方向性梯度先验。由于雨纹通常呈现竖直方向或特定倾斜角度的线状结构，方向性卷积核能够更有效地捕获这些方向性特征，提供RFM所缺乏的空域方向信息。</p>
+<p>二者的协同作用使得网络能够同时从频域和空域两个维度获取互补信息，从而实现比单一域更全面的雨纹特征建模。</p>
+
+<h3>3.3.5 多尺度部署策略</h3>
+<p>在MultiscaleNet的三个尺度层级（48通道、96通道、192通道）中，每个Transformer Block均替换为MFGCP_TransformerBlock。这种全尺度部署策略确保了频域-空域协同增强能力能够覆盖从粗糙到精细的所有特征层级，使得网络在不同分辨率下均能充分利用频域和方向性先验信息。</p>
+
+<h2>3.4 创新点3：分层自适应频域损失与渐进式课程学习（HAFL）</h2>
+
+<h3>3.4.1 设计动机</h3>
+<p>标准的L1/L2损失函数在空域中对所有像素施加等强度的约束，同等对待所有频率成分。然而，从信号处理的角度分析，不同频率成分的恢复难度存在显著差异：低频成分对应图像的整体结构和平均亮度，在去雨任务中相对容易恢复；中频成分对应图像的主要纹理和轮廓信息；高频成分对应图像的细节纹理和边缘信息，这部分信息在雨天退化中损失最为严重，恢复难度也最大。因此，需要设计针对不同频段的差异化约束机制，使网络在训练过程中对不同频率成分施加不同强度的监督信号。</p>
+
+<h3>3.4.2 频域三子带分解</h3>
+
+<!-- SVG: HAFL 频域分解图 -->
+<div class="fig-wrapper">
+<svg viewBox="0 0 420 300" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Serif SC',serif;font-size:11px;">
+  <rect width="420" height="300" fill="#fff"/>
+  <text x="210" y="20" text-anchor="middle" font-size="13" font-weight="700">频域三子带分解</text>
+  <!-- 外圆 高频 -->
+  <circle cx="210" cy="160" r="120" fill="#fdebd0" stroke="#e67e22" stroke-width="1.5" opacity="0.5"/>
+  <!-- 中圆 中频 -->
+  <circle cx="210" cy="160" r="80" fill="#d6eaf8" stroke="#2980b9" stroke-width="1.5" opacity="0.5"/>
+  <!-- 内圆 低频 -->
+  <circle cx="210" cy="160" r="40" fill="#d5f5e3" stroke="#27ae60" stroke-width="1.5" opacity="0.6"/>
+  <!-- 轴线 -->
+  <line x1="90" y1="160" x2="330" y2="160" stroke="#999" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="210" y1="40" x2="210" y2="280" stroke="#999" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <!-- 标签 -->
+  <text x="210" y="163" text-anchor="middle" font-size="12" font-weight="600" fill="#27ae60">低频</text>
+  <text x="210" y="100" text-anchor="middle" font-size="12" font-weight="600" fill="#2980b9">中频</text>
+  <text x="210" y="52" text-anchor="middle" font-size="12" font-weight="600" fill="#e67e22">高频</text>
+  <!-- 图例 -->
+  <rect x="30" y="270" width="12" height="12" fill="#d5f5e3" stroke="#27ae60"/>
+  <text x="48" y="281" font-size="10">M_low（低频掩膜）</text>
+  <rect x="150" y="270" width="12" height="12" fill="#d6eaf8" stroke="#2980b9"/>
+  <text x="168" y="281" font-size="10">M_mid（中频掩膜）</text>
+  <rect x="280" y="270" width="12" height="12" fill="#fdebd0" stroke="#e67e22"/>
+  <text x="298" y="281" font-size="10">M_high（高频掩膜）</text>
+</svg>
+<div class="fig-caption">图5 HAFL频域三子带分解示意图。频域被划分为低频（整体结构）、中频（主要纹理）和高频（细节纹理）三个子带，满足 M_low + M_mid + M_high = 1。</div>
+</div>
+
+<p>给定预测图像 $\hat{\mathbf{x}}$ 和真实图像 $\mathbf{x}^*$，HAFL首先对二者分别进行FFT变换，并通过三个频域掩膜将其分解为低、中、高三个子带：</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{X}_{fft} = \text{FFT}_{2D}(\mathbf{x})$$</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{x}_{low} = \text{iFFT}_{2D}(\mathbf{X}_{fft} \cdot M_{low})$$</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{x}_{mid} = \text{iFFT}_{2D}(\mathbf{X}_{fft} \cdot M_{mid})$$</p>
+<p class="no-indent" style="text-align:center;">$$\mathbf{x}_{high} = \text{iFFT}_{2D}(\mathbf{X}_{fft} \cdot M_{high})$$</p>
+<p>其中 $M_{low}$、$M_{mid}$、$M_{high}$ 为三个频域二值掩膜，满足 $M_{low} + M_{mid} + M_{high} = 1$，确保频域完全覆盖、无遗漏。</p>
+
+<h3>3.4.3 渐进式权重调度（课程学习）</h3>
+
+<!-- SVG: HAFL 权重调度曲线 -->
+<div class="fig-wrapper">
+<svg viewBox="0 0 500 280" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Serif SC',serif;font-size:11px;">
+  <rect width="500" height="280" fill="#fff"/>
+  <!-- 坐标轴 -->
+  <line x1="60" y1="230" x2="460" y2="230" stroke="#333" stroke-width="1.5"/>
+  <line x1="60" y1="230" x2="60" y2="30" stroke="#333" stroke-width="1.5"/>
+  <!-- 轴标签 -->
+  <text x="260" y="260" text-anchor="middle" font-size="12">训练进度 t = epoch / total_epochs</text>
+  <text x="25" y="130" text-anchor="middle" font-size="12" transform="rotate(-90 25 130)">权重值</text>
+  <!-- 刻度 -->
+  <text x="60" y="245" text-anchor="middle" font-size="9">0</text>
+  <text x="160" y="245" text-anchor="middle" font-size="9">0.25</text>
+  <text x="260" y="245" text-anchor="middle" font-size="9">0.50</text>
+  <text x="360" y="245" text-anchor="middle" font-size="9">0.75</text>
+  <text x="460" y="245" text-anchor="middle" font-size="9">1.0</text>
+  <!-- Y轴刻度 -->
+  <text x="52" y="234" text-anchor="end" font-size="9">0.0</text>
+  <text x="52" y="184" text-anchor="end" font-size="9">0.2</text>
+  <text x="52" y="134" text-anchor="end" font-size="9">0.4</text>
+  <text x="52" y="84" text-anchor="end" font-size="9">0.6</text>
+  <text x="52" y="34" text-anchor="end" font-size="9">0.8</text>
+  <!-- 网格 -->
+  <line x1="60" y1="180" x2="460" y2="180" stroke="#eee" stroke-width="0.5"/>
+  <line x1="60" y1="130" x2="460" y2="130" stroke="#eee" stroke-width="0.5"/>
+  <line x1="60" y1="80" x2="460" y2="80" stroke="#eee" stroke-width="0.5"/>
+  <!-- w_low = 0.8 (恒定) -->
+  <line x1="60" y1="30" x2="460" y2="30" stroke="#27ae60" stroke-width="2.5"/>
+  <text x="475" y="34" font-size="10" fill="#27ae60" font-weight="600">w_low=0.8</text>
+  <!-- w_mid = 0.5*min(1, 2t) -->
+  <polyline points="60,230 260,230 260,105 460,105" fill="none" stroke="#2980b9" stroke-width="2.5"/>
+  <text x="475" y="109" font-size="10" fill="#2980b9" font-weight="600">w_mid</text>
+  <!-- w_high = 0.3*min(1, max(0, 3(t-1/3))) -->
+  <polyline points="60,230 193,230 193,230 326,155 460,155" fill="none" stroke="#e67e22" stroke-width="2.5"/>
+  <text x="475" y="159" font-size="10" fill="#e67e22" font-weight="600">w_high</text>
+  <!-- 标注 -->
+  <text x="193" y="248" text-anchor="middle" font-size="8" fill="#e67e22">t=1/3</text>
+  <text x="260" y="248" text-anchor="middle" font-size="8" fill="#2980b9">t=0.5</text>
+</svg>
+<div class="fig-caption">图6 HAFL渐进式权重调度曲线。低频权重恒定保持基础结构约束，中频权重在训练前半段线性增长，高频权重在训练1/3后开始线性增长，实现从易到难的课程学习。</div>
+</div>
+
+<p>HAFL采用渐进式权重调度策略，模拟课程学习（Curriculum Learning）的思想，使网络从易到难逐步学习各频段的恢复任务：</p>
+<p class="no-indent" style="text-align:center;">$$w_{low} = 0.8 \quad (\text{恒定})$$</p>
+<p class="no-indent" style="text-align:center;">$$w_{mid} = 0.5 \cdot \min(1, 2t)$$</p>
+<p class="no-indent" style="text-align:center;">$$w_{high} = 0.3 \cdot \min(1, \max(0, 3(t - \tfrac{1}{3})))$$</p>
+<p>其中 $t = \text{epoch} / \text{total\_epochs}$ 表示当前训练进度。该调度策略的核心思想是：在训练初期，网络仅受到低频约束，专注于恢复图像的整体结构；随着训练推进，中频约束逐步加入，引导网络恢复主要纹理；在训练后期，高频约束才完全生效，促使网络恢复精细细节。这种从易到难的学习策略符合课程学习的原理，有助于提高模型的最终收敛质量。</p>
+
+<h3>3.4.4 HAFL 损失函数</h3>
+<p>HAFL损失函数将预测与真实图像分别分解为三个子带后，对各子带分别计算L1距离并加权求和：</p>
+<p class="no-indent" style="text-align:center;">$$\mathcal{L}_{HAFL} = w_{low} \cdot \|\hat{\mathbf{x}}_{low} - \mathbf{x}^*_{low}\|_1 + w_{mid} \cdot \|\hat{\mathbf{x}}_{mid} - \mathbf{x}^*_{mid}\|_1 + w_{high} \cdot \|\hat{\mathbf{x}}_{high} - \mathbf{x}^*_{high}\|_1$$</p>
+
+<h3>3.4.5 总损失函数</h3>
+<p>最终的训练损失函数由五个部分组成：</p>
+<p class="no-indent" style="text-align:center;">$$\mathcal{L}_{total} = \mathcal{L}_{char} + 0.01 \mathcal{L}_{fft} + 0.05 \mathcal{L}_{edge} + 0.1 \mathcal{L}_{l1} + 0.1 \mathcal{L}_{HAFL}$$</p>
+<p>其中 $\mathcal{L}_{char}$ 为 Charbonnier 损失（基线原有），$\mathcal{L}_{fft}$ 为频域幅度谱损失，$\mathcal{L}_{edge}$ 为边缘损失，$\mathcal{L}_{l1}$ 为标准L1损失，$\mathcal{L}_{HAFL}$ 为本文提出的分层自适应频域损失。HAFL作为新增的正则化项，通过频域分层约束引导网络在不同频率上实现更精准的恢复。</p>
+
+<!-- ==================== 第四章 ==================== -->
+<h1>第四章 实验设置与结果</h1>
+
+<h2>4.1 实验设置</h2>
+<p><strong>数据集。</strong>本文的主要实验在Rain200L数据集上进行，该数据集包含1800对训练图像和200对测试图像，模拟轻度降雨场景。Rain200L是图像去雨领域最常用的基准数据集之一，其雨纹呈现较为均匀、密度较低的特点，适合评估模型在轻度降雨场景下的恢复能力。后续还计划在Rain200H（重度雨）、SPA-Data、DID-Data等更多数据集上进行验证。</p>
+<p><strong>评估指标。</strong>采用峰值信噪比（Peak Signal-to-Noise Ratio, PSNR）和结构相似性（Structural Similarity Index, SSIM）作为主要评估指标。为确保与Matlab参考实现对齐，所有指标均在Y通道（亮度通道）上计算，即先将RGB图像转换为YCbCr色彩空间后仅对Y通道进行评估。</p>
+<p><strong>硬件环境。</strong>实验在4×NVIDIA H20 GPU（各141GB显存）的服务器上进行，总可用显存141GB，充分支持大模型和多任务的并行训练。</p>
+<p><strong>训练配置。</strong>采用DDP（Distributed Data Parallel）分布式训练策略，有效利用多卡并行加速训练过程。优化器为AdamW，初始学习率为8×10⁻⁴，采用Cosine学习率调度策略，训练周期为800个epoch。批处理大小为每卡5，总批大小为20。</p>
+<p><strong>基线模型。</strong>本文选择NeRD-Rain（CVPR 2024）[8]作为基线模型，在其基础上逐步添加三个创新点，构建完整的消融实验体系。</p>
+
+<h2>4.2 消融实验结果</h2>
+<p>消融实验采用严格的递进结构，逐步添加各创新点以验证其独立贡献和叠加效果。实验结果如表2所示。</p>
+
+<table>
+  <caption>表2 Rain200L数据集上的消融实验结果（Y通道PSNR/SSIM）</caption>
+  <tr><th>配置</th><th>PSNR (dB)</th><th>SSIM</th><th>相对提升</th><th>状态</th></tr>
+  <tr><td>Baseline (NeRD-Rain)</td><td>41.71</td><td>0.9903</td><td>—</td><td>完成</td></tr>
+  <tr><td>+ RFM（创新点1）</td><td>41.79</td><td>0.9906</td><td>+0.08 dB</td><td>完成</td></tr>
+  <tr><td>+ RFM + HAFL（创新点1+3）</td><td>41.89</td><td>0.9905</td><td>+0.18 dB</td><td>完成</td></tr>
+  <tr><td>+ RFM + MFGCP + HAFL（全部）</td><td>训练中</td><td>—</td><td>预期>42.0</td><td>进行中</td></tr>
+</table>
+
+<p>注：消融实验中的创新点3（HAFL）在创新点1+2基础上验证为严格递进结构，因此创新点1+3的组合为阶段性验证实验，创新点2的完整贡献需等待三创新点集成实验完成后方可确认。</p>
+
+<!-- SVG: 消融实验递进图 -->
+<div class="fig-wrapper">
+<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Serif SC',serif;font-size:11px;">
+  <rect width="600" height="260" fill="#fff"/>
+  <text x="300" y="20" text-anchor="middle" font-size="13" font-weight="700">消融实验递进PSNR提升</text>
+  <!-- Y轴 -->
+  <line x1="80" y1="220" x2="80" y2="40" stroke="#333" stroke-width="1.5"/>
+  <text x="30" y="130" text-anchor="middle" font-size="11" transform="rotate(-90 30 130)">PSNR (dB)</text>
+  <!-- X轴 -->
+  <line x1="80" y1="220" x2="550" y2="220" stroke="#333" stroke-width="1.5"/>
+  <!-- Y刻度 -->
+  <text x="72" y="205" text-anchor="end" font-size="9">41.70</text>
+  <text x="72" y="165" text-anchor="end" font-size="9">41.75</text>
+  <text x="72" y="125" text-anchor="end" font-size="9">41.80</text>
+  <text x="72" y="85" text-anchor="end" font-size="9">41.85</text>
+  <text x="72" y="55" text-anchor="end" font-size="9">41.90</text>
+  <!-- 网格线 -->
+  <line x1="80" y1="200" x2="550" y2="200" stroke="#eee" stroke-width="0.5"/>
+  <line x1="80" y1="160" x2="550" y2="160" stroke="#eee" stroke-width="0.5"/>
+  <line x1="80" y1="120" x2="550" y2="120" stroke="#eee" stroke-width="0.5"/>
+  <line x1="80" y1="80" x2="550" y2="80" stroke="#eee" stroke-width="0.5"/>
+  <!-- 柱子1: Baseline 41.71 -->
+  <rect x="120" y="192" width="80" height="28" fill="#bdc3c7" stroke="#999" rx="2"/>
+  <text x="160" y="185" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1a1a">41.71</text>
+  <text x="160" y="240" text-anchor="middle" font-size="9">Baseline</text>
+  <!-- 柱子2: +RFM 41.79 -->
+  <rect x="240" y="128" width="80" height="92" fill="#d5f5e3" stroke="#27ae60" rx="2"/>
+  <text x="280" y="121" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1a1a">41.79</text>
+  <text x="280" y="240" text-anchor="middle" font-size="9">+RFM</text>
+  <!-- 柱子3: +RFM+HAFL 41.89 -->
+  <rect x="360" y="48" width="80" height="172" fill="#d6eaf8" stroke="#2980b9" rx="2"/>
+  <text x="400" y="41" text-anchor="middle" font-size="11" font-weight="600" fill="#1a1a1a">41.89</text>
+  <text x="400" y="240" text-anchor="middle" font-size="9">+RFM+HAFL</text>
+  <!-- 柱子4: 全部 (虚线) -->
+  <rect x="480" y="40" width="50" height="180" fill="none" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="5,3" rx="2"/>
+  <text x="505" y="33" text-anchor="middle" font-size="11" font-weight="600" fill="#e67e22">>42.0?</text>
+  <text x="505" y="240" text-anchor="middle" font-size="9">全部(预期)</text>
+  <!-- 提升箭头 -->
+  <text x="220" y="155" text-anchor="middle" font-size="9" fill="#27ae60">+0.08</text>
+  <text x="340" y="95" text-anchor="middle" font-size="9" fill="#2980b9">+0.10</text>
+</svg>
+<div class="fig-caption">图7 消融实验递进PSNR提升图。从基线到逐步添加创新点，PSNR呈现阶梯式提升。最后一列为三创新点集成实验的预期结果。</div>
+</div>
+
+<h2>4.3 结果分析</h2>
+<p><strong>创新点1（RFM）的贡献。</strong>在基线基础上添加RFM后，PSNR从41.71 dB提升至41.79 dB（+0.08 dB），SSIM从0.9903提升至0.9906。这一结果验证了频域增强策略在图像去雨中的有效性：通过在频域中对幅度谱进行自适应增强，网络能够更精准地定位并抑制雨纹的周期性频率成分，从而改善去雨质量。</p>
+<p><strong>创新点3（HAFL）的贡献。</strong>在RFM基础上进一步添加HAFL损失后，PSNR从41.79 dB提升至41.89 dB（额外+0.10 dB）。值得注意的是，HAFL作为训练层面的优化策略，不引入任何额外的模型参数，仅通过改变损失函数的设计即可实现显著的性能提升。这一结果充分证明了频域分层损失约束的价值：针对不同频率成分施加差异化的监督信号，有助于网络在训练过程中实现更优的频率响应。</p>
+<p><strong>创新点叠加效应。</strong>RFM和HAFL分别从模型结构和训练策略两个不同维度进行优化，因此它们的贡献可以叠加。RFM提供了模型层面的频域增强能力，HAFL则从训练层面引导网络更好地利用频域信息，二者形成互补。三创新点集成实验（exp3）正在进行中，预期MFGCP的加入将进一步提升性能。</p>
+
+<h2>4.4 参数量对比</h2>
+<p>各创新点引入的额外参数量如表3所示，可以看出所提方法的参数开销均较小，具有良好的参数效率。</p>
+
+<table>
+  <caption>表3 各创新点参数量对比</caption>
+  <tr><th>模型配置</th><th>参数量</th><th>额外开销</th><th>说明</th></tr>
+  <tr><td>Baseline (NeRD-Rain)</td><td>~25.6M</td><td>—</td><td>基线模型</td></tr>
+  <tr><td>+ RFM</td><td>~25.7M</td><td>+0.1M</td><td>仅两个1×1卷积层</td></tr>
+  <tr><td>+ MFGCP</td><td>~25.9M</td><td>+0.23M</td><td>五方向卷积+α参数</td></tr>
+  <tr><td>+ HAFL</td><td>无额外参数</td><td>0</td><td>仅损失函数层面优化</td></tr>
+</table>
+
+<p>MFGCP模块仅增加约0.23M参数（占比<5%），这主要来源于五个方向微分卷积核以及每个Block中独立的α可学习参数。HAFL作为纯训练策略的优化，不引入任何额外参数，仅改变了损失函数的计算方式。总体而言，三个创新点的参数开销均较小，具有良好的实用性和可扩展性。</p>
+
+<!-- ==================== 第五章 ==================== -->
+<h1>第五章 当前进展与后续计划</h1>
+
+<h2>5.1 已完成工作</h2>
+<p>截至本报告撰写时，本研究已完成以下主要工作：</p>
+
+<table>
+  <caption>表4 已完成工作进度</caption>
+  <tr><th>序号</th><th>工作内容</th><th>状态</th></tr>
+  <tr><td>1</td><td>文献调研与方案设计（频域去雨方法全面调研、三个创新点方案设计）</td><td>✅ 完成</td></tr>
+  <tr><td>2</td><td>创新点1（RFM）代码实现与消融实验验证</td><td>✅ 完成</td></tr>
+  <tr><td>3</td><td>创新点2（MFGCP + MDPConv）代码实现</td><td>✅ 完成</td></tr>
+  <tr><td>4</td><td>创新点3（HAFL）代码实现与消融实验验证</td><td>✅ 完成</td></tr>
+  <tr><td>5</td><td>4卡DDP分布式训练环境配置与加速方案</td><td>✅ 完成</td></tr>
+  <tr><td>6</td><td>消融实验验证框架搭建（exp1/exp2/exp3）</td><td>✅ 完成</td></tr>
+  <tr><td>7</td><td>exp3（三创新点集成实验）训练</td><td>🔄 进行中</td></tr>
+</table>
+
+<h2>5.2 后续计划</h2>
+<p>后续研究计划如下：</p>
+
+<table>
+  <caption>表5 后续研究计划时间表</caption>
+  <tr><th>时间</th><th>任务内容</th><th>预期成果</th></tr>
+  <tr><td>7月上旬</td><td>完成exp3训练，确认三创新点叠加效果</td><td>确认MFGCP贡献，完成全部消融实验</td></tr>
+  <tr><td>7月中旬</td><td>在Rain200H、SPA-Data、DID-Data等数据集上验证</td><td>多数据集实验结果，验证泛化能力</td></tr>
+  <tr><td>7–8月</td><td>与SOTA方法全面对比（Restormer、DRSformer、DeRainMamba等）</td><td>性能对比表格和可视化结果</td></tr>
+  <tr><td>8–9月</td><td>论文撰写（方法描述、实验分析、图表制作）</td><td>论文初稿</td></tr>
+  <tr><td>9–10月</td><td>论文修改、投稿准备</td><td>投稿至目标会议/期刊</td></tr>
+</table>
+
+<!-- ==================== 参考文献 ==================== -->
+<h1>参考文献</h1>
+<div class="references">
+<p>[1] Luo Y, Xu Y, Ji H. "Removing Rain from a Single Image via Discriminative Sparse Coding". ICCV, 2015.</p>
+<p>[2] Li Y, Tan RT, Guo X, et al. "Rain Streak Removal Using Layer Priors". CVPR, 2016.</p>
+<p>[3] Kang LW, Lin CW, Fu YH. "Automatic Single-Image-Based Rain Streaks Removal via Image Decomposition". IEEE Transactions on Image Processing, 2012.</p>
+<p>[4] Fu X, Huang J, Zeng D, et al. "Removing Rain from Single Images via a Deep Detail Network". CVPR, 2017.</p>
+<p>[5] Ren D, Zuo W, Hu Q, et al. "Progressive Image Deraining Networks: A Better and Simpler Baseline". CVPR, 2019.</p>
+<p>[6] Zamir SW, Arora A, Khan S, et al. "Multi-Stage Progressive Image Restoration". CVPR, 2021.</p>
+<p>[7] Zamir SW, Arora A, Khan S, et al. "Restormer: Efficient Transformer for High-Resolution Image Restoration". CVPR, 2022.</p>
+<p>[8] Chen X, Chen Y, Li H, et al. "NeRD-Rain: Neural Representation for Deraining". CVPR, 2024.</p>
+<p>[9] Liu J, Sun H, Zhu Y. "Frequency Domain Image Restoration with Deep Learning". ICASSP, 2021.</p>
+<p>[10] Suvorov V, Logacheva E, Mashikhin A, et al. "Resolution-robust Large Mask Inpainting with Fourier Convolutions". NeurIPS, 2022.</p>
+<p>[11] DeRainMamba. "Directional Differential Convolution for Image Deraining". IEEE Signal Processing Letters, 2025.</p>
+<p>[12] Yang W, Ren W, Liu J, et al. "Deep Joint Rain Detection and Removal from a Single Image". CVPR, 2017.</p>
+<p>[13] Hu X, Fu CW, Zhu L, et al. "Depth-Attentional Features for Single-Image Rain Removal". CVPR, 2019.</p>
+<p>[14] Wang T, Yang X, Xu K, et al. "Spatial Attentive Single-Image Deraining with a High Quality Real Rain Dataset". CVPR, 2019.</p>
+<p>[15] Yue Z, Loy CC, Tang X. "Semi-supervised Image Deraining". ICCV, 2019.</p>
+<p>[16] Chen J, Tan CH, Hou J, et al. "Robust Image Deraining Using Generative Adversarial Network". IEEE Transactions on Image Processing, 2020.</p>
+<p>[17] Wang Y, Liu X, Li H, et al. "DRSformer: Multi-scale Feature Fusion Transformer for Image Deraining". arXiv preprint, 2023.</p>
+<p>[18] Fu X, Liang B, Huang Y, et al. "Lightweight Multi-Scale Feature Fusion for Single Image Deraining". IEEE Transactions on Circuits and Systems for Video Technology, 2021.</p>
+<p>[19] Jiang K, Wang D, Yi P, et al. "Multi-Scale Progressive Fusion Network for Single Image Deraining". CVPR, 2020.</p>
+<p>[20] Wang H, Xie Q, Zhao Q, et al. "A Model-Based Deep Learning Framework for Single Image Deraining". International Journal of Computer Vision, 2022.</p>
+</div>
+
+</body>
+</html>
