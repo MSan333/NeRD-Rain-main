@@ -17,7 +17,11 @@ build/
 
 # Training artifacts
 checkpoints/
+change2/
+ckpt/
 logs/
+reports/
+results/
 *.pth
 *.pt
 
