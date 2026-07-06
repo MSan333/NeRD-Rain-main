@@ -298,6 +298,126 @@ class MFGCP_TransformerBlock(nn.Module):
         return x
 
 
+class AdaptiveFreqSelect(nn.Module):
+    """自适应频率选择模块
+    
+    FFT → 分离为低/中/高频三个子带 → 每个子带独立 1x1 Conv 处理 → 可学习频带权重加权 → iFFT
+    """
+    def __init__(self, dim, cutoff_low=0.25, cutoff_high=0.75):
+        super().__init__()
+        self.cutoff_low = cutoff_low
+        self.cutoff_high = cutoff_high
+        # 三个子带各自的 1x1 Conv 处理
+        self.low_conv = nn.Conv2d(dim, dim, 1)
+        self.mid_conv = nn.Conv2d(dim, dim, 1)
+        self.high_conv = nn.Conv2d(dim, dim, 1)
+        # 可学习的频带权重 (初始化为均等)
+        self.band_weights = nn.Parameter(torch.ones(3) / 3)
+        
+    def forward(self, x):
+        B, C, H, W = x.shape
+        # FFT
+        x_fft = torch.fft.fft2(x, dim=(-2, -1))
+        
+        # 创建频率距离图 (归一化到[0,1])
+        freq_h = torch.fft.fftfreq(H, device=x.device)
+        freq_w = torch.fft.fftfreq(W, device=x.device)
+        freq_dist = torch.sqrt(freq_h[:, None]**2 + freq_w[None, :]**2)
+        freq_dist = freq_dist / (freq_dist.max() + 1e-8)
+        
+        # 频带掩码
+        mask_low = (freq_dist <= self.cutoff_low).float()
+        mask_high = (freq_dist >= self.cutoff_high).float()
+        mask_mid = 1.0 - mask_low - mask_high
+        
+        # 分离三个子带 → iFFT → Conv处理
+        x_low = torch.fft.ifft2(x_fft * mask_low, dim=(-2, -1)).real
+        x_mid = torch.fft.ifft2(x_fft * mask_mid, dim=(-2, -1)).real
+        x_high = torch.fft.ifft2(x_fft * mask_high, dim=(-2, -1)).real
+        
+        x_low = self.low_conv(x_low)
+        x_mid = self.mid_conv(x_mid)
+        x_high = self.high_conv(x_high)
+        
+        # 自适应加权融合
+        w = torch.softmax(self.band_weights, dim=0)
+        out = w[0] * x_low + w[1] * x_mid + w[2] * x_high
+        
+        return out
+
+
+class SFStar(nn.Module):
+    """Spatial-Frequency Star Interaction Module
+    
+    借鉴 StarIR (TPAMI 2026) 的 Star Operation 和 AdaIR (ICLR 2025) 的频率自适应调制。
+    
+    结构:
+      空域分支: 7x7 DWConv 捕获空间上下文
+      频域分支: AdaptiveFreqSelect 自适应频率选择
+      Star Operation: 逐元素乘法实现高维特征交互
+      通道注意力: SE-style 全局信息整合
+      投影: 1x1 Conv 回原维度
+    """
+    def __init__(self, dim, reduction=4):
+        super().__init__()
+        # 空域分支: 7x7 DWConv
+        self.spatial_branch = nn.Sequential(
+            nn.Conv2d(dim, dim, kernel_size=7, padding=3, groups=dim, bias=False),
+            nn.GELU()
+        )
+        # 频域分支
+        self.freq_branch = AdaptiveFreqSelect(dim)
+        # 通道注意力 (SE-style)
+        self.channel_attn = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(dim, dim // reduction, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(dim // reduction, dim, 1),
+            nn.Sigmoid()
+        )
+        # 输出投影
+        self.proj = nn.Conv2d(dim, dim, kernel_size=1)
+        
+    def forward(self, x):
+        # 空域分支
+        f_spatial = self.spatial_branch(x)
+        # 频域分支
+        f_freq = self.freq_branch(x)
+        # Star Operation: 逐元素乘法
+        f_star = f_spatial * f_freq
+        # 通道注意力
+        attn = self.channel_attn(f_star)
+        f_star = f_star * attn
+        # 投影
+        out = self.proj(f_star)
+        return out
+
+
+class SFStar_TransformerBlock(nn.Module):
+    """TransformerBlock with parallel RFM + SFStar branches.
+    
+    创新点2: 空频星型交互模块 (SFStar)
+    借鉴 StarIR (TPAMI 2026) + AdaIR (ICLR 2025)
+    
+    结构:
+      x = x + attn(norm1(x))
+      x = x + ffn(norm2(x)) + rfm(x) + sfstar(x)
+    """
+    def __init__(self, dim, num_heads, ffn_expansion_factor, bias, LayerNorm_type, BasicConv=BasicConv):
+        super().__init__()
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
+        self.attn = Attention(dim, num_heads, bias, BasicConv=BasicConv)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
+        self.ffn = FeedForward(dim, ffn_expansion_factor, bias, BasicConv=BasicConv)
+        self.rfm = RFM(dim)
+        self.sfstar = SFStar(dim)
+
+    def forward(self, x):
+        x = x + self.attn(self.norm1(x))
+        x = x + self.ffn(self.norm2(x)) + self.rfm(x) + self.sfstar(x)
+        return x
+
+
 class OverlapPatchEmbed(nn.Module):
     def __init__(self, in_c=3, embed_dim=48, bias=False):
         super(OverlapPatchEmbed, self).__init__()
@@ -388,7 +508,7 @@ class MultiscaleNet(nn.Module):
 
         self.down2_3_small = Downsample(int(dim * 2 ** 1))
         self.latent_small = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            SFStar_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_small = Upsample(int(dim * 2 ** 2))
@@ -429,10 +549,10 @@ class MultiscaleNet(nn.Module):
         self.down2_3_mid = Downsample(int(dim * 2 ** 1))
         self.down2_3_mid2 = Downsample(int(dim * 2 ** 1))
         self.latent_mid1 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            SFStar_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_mid2 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            SFStar_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_mid = Upsample(int(dim * 2 ** 2))
@@ -491,13 +611,13 @@ class MultiscaleNet(nn.Module):
         self.down2_3_max2 = Downsample(int(dim * 2 ** 1))
         self.down2_3_max3 = Downsample(int(dim * 2 ** 1))
         self.latent_max1 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            SFStar_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_max2 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            SFStar_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
         self.latent_max3 = nn.Sequential(*[
-            MFGCP_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
+            SFStar_TransformerBlock(dim=int(dim * 2 ** 2), num_heads=heads[2], ffn_expansion_factor=ffn_expansion_factor,
                              bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[2])])
 
         self.up3_2_max = Upsample(int(dim * 2 ** 2))

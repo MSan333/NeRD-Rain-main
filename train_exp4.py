@@ -1,15 +1,9 @@
-train_lr5e5_4gpu.py — 基于 exp3_lr4e5 best checkpoint 的降 LR 续训版本（lr=5e-5）
-
-修改点：
-  - session: DDP_4GPU_exp3_lr5e5（新目录保存）
-  - start_lr: 4e-5 → 5e-5
-  - end_lr:   1e-6
-  - warmup:   关闭（续训不需要 warmup）
-  - RESUME:   True，从 exp3_lr4e5 的 model_best.pth 续训
-  - num_epochs: 从 checkpoint epoch 起再跑 500 epoch
-  - Resume 路径硬编码指向原 session DDP_2GPU_exp3_lr4e5 的 best checkpoint
 """
-
+exp4: SFStar 模块训练（从头开始）
+- 创新点2替换为 SFStar（空频星型交互模块）
+- 2卡 DDP, lr=2e-4 → 1e-6, warmup 3 epoch, 500 epoch
+- 从头训练（模块结构变化，不恢复 exp3 的 checkpoint）
+"""
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -33,8 +27,8 @@ import numpy as np
 import utils
 from data_RGB import get_training_data, get_validation_data
 from model import MultiscaleNet as myNet
-#from model_S import MultiscaleNet as myNet
 from losses import CharbonnierLoss, EdgeLoss, fftLoss, HierarchicalAdaptiveFreqLoss
+from warmup_scheduler import GradualWarmupScheduler
 from tqdm import tqdm
 from get_parameter_number import get_parameter_number
 import kornia
@@ -52,16 +46,16 @@ torch.cuda.manual_seed_all(1234)
 
 start_epoch = 1
 
-parser = argparse.ArgumentParser(description='Image Deraininig')
+parser = argparse.ArgumentParser(description='Image Deraininig - exp4 SFStar')
 
 parser.add_argument('--train_dir', default='../data/Rain200L/train/', type=str, help='Directory of train images')
 parser.add_argument('--val_dir', default='../data/Rain200L/test/', type=str, help='Directory of validation images')
 parser.add_argument('--model_save_dir', default='./ckpt/', type=str, help='Path to save weights')
-parser.add_argument('--pretrain_weights', default='', type=str, help='Path to pretrain-weights')
+parser.add_argument('--pretrain_weights', default='./ckpt/Deraininig/models/SFStar_2GPU_lr2e4/model_latest.pth', type=str, help='Path to pretrain-weights')
 parser.add_argument('--mode', default='Deraininig', type=str)
-parser.add_argument('--session', default='DDP_4GPU_exp3_lr5e5', type=str, help='session')
+parser.add_argument('--session', default='SFStar_2GPU_lr2e4', type=str, help='session')
 parser.add_argument('--patch_size', default=256, type=int, help='patch size')
-parser.add_argument('--num_epochs', default=1000, type=int, help='num_epochs')
+parser.add_argument('--num_epochs', default=500, type=int, help='num_epochs')
 parser.add_argument('--batch_size', default=1, type=int, help='batch_size per gpu')
 parser.add_argument('--val_epochs', default=1, type=int, help='val_epochs')
 parser.add_argument('--local_rank', default=0, type=int, help='local rank for DDP')
@@ -85,18 +79,19 @@ if is_main:
     swanlab.login(api_key="o4MGQAOSX8rGztH69Jj5P")
     swanlab.init(
         project="NeRD-Rain",
-        experiment_name="DDP_4GPU_exp3_lr2e5",
+        experiment_name="SFStar_2GPU_lr2e4",
         config={
             **vars(args),
-            "start_lr": 2e-5,
+            "start_lr": 2e-4,
             "end_lr": 1e-6,
-            "warmup_epochs": 0,
+            "warmup_epochs": 3,
             "hafl_warmup_epochs": args.hafl_warmup_epochs,
             "optimizer": "Adam",
             "betas": (0.9, 0.999),
             "eps": 1e-8,
             "ddp_world_size": world_size,
-            "resume_from": "DDP_2GPU_exp3_lr2e5/model_best.pth",
+            "model_variant": "SFStar",
+            "description": "exp4: SFStar替代MFGCP，从头训练500epoch",
         },
     )
 
@@ -115,8 +110,7 @@ num_epochs = args.num_epochs
 batch_size = args.batch_size
 val_epochs = args.val_epochs
 
-# 降 LR 续训: 5e-5 → 1e-6（从 exp3_lr4e5 best checkpoint 出发）
-start_lr = 2e-5
+start_lr = 2e-4
 end_lr = 1e-6
 
 ######### Model ###########
@@ -125,45 +119,39 @@ model_restoration = myNet()
 if is_main:
     get_parameter_number(model_restoration)
 
+######### Resume from checkpoint ###########
+if args.pretrain_weights and os.path.exists(args.pretrain_weights):
+    checkpoint = torch.load(args.pretrain_weights, map_location='cpu')
+    model_restoration.load_state_dict(checkpoint['state_dict'])
+    start_epoch = checkpoint['epoch'] + 1
+    if is_main:
+        print(f"==> Resumed from epoch {checkpoint['epoch']}, starting at epoch {start_epoch}")
+        print(f"==> Loaded weights from: {args.pretrain_weights}")
+else:
+    if is_main:
+        print("==> No checkpoint found, training from scratch")
+
 model_restoration = model_restoration.cuda(local_rank)
 model_restoration = DDP(model_restoration, device_ids=[local_rank], find_unused_parameters=True)
 
-######### Resume（从原 session 的 best checkpoint 加载） ###########
-RESUME = True
-RESUME_CKPT_PATH = os.path.join(args.model_save_dir, mode, 'models', 'DDP_2GPU_exp3_lr2e5', 'model_best.pth')
-
-if RESUME:
-    # 仅加载模型权重（不加载 optimizer state，使用全新低 LR）
-    utils.load_checkpoint(model_restoration.module, RESUME_CKPT_PATH)
-    start_epoch = utils.load_start_epoch(RESUME_CKPT_PATH) + 1
-
-    # 动态计算 num_epochs：从 checkpoint epoch 起再跑 300 epoch
-    num_epochs = start_epoch + 300 - 1
-
-    if is_main:
-        print('------------------------------------------------------------------------------')
-        print(f"==> Resume from: {RESUME_CKPT_PATH}")
-        print(f"==> Resuming at epoch: {start_epoch}, training until epoch: {num_epochs}")
-        print(f"==> New LR: {start_lr} → {end_lr} (CosineAnnealing, no warmup)")
-        print('------------------------------------------------------------------------------')
-
-# 创建 optimizer（使用新的低学习率，不恢复旧的 optimizer state）
 optimizer = optim.Adam(model_restoration.parameters(), lr=start_lr, betas=(0.9, 0.999), eps=1e-8)
 
-######### Scheduler（无 warmup，纯 CosineAnnealing） ###########
-scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs - start_epoch + 1, eta_min=end_lr)
+######### Scheduler ###########
+warmup_epochs = 3
+scheduler_cosine = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs - warmup_epochs, eta_min=end_lr)
+scheduler = GradualWarmupScheduler(optimizer, multiplier=1, total_epoch=warmup_epochs, after_scheduler=scheduler_cosine)
 
-Pretrain = False
-model_pre_dir = ''
+# Step scheduler to correct position for resumed epoch
+for i in range(1, start_epoch):
+    scheduler.step()
 
-######### Pretrain ###########
-if Pretrain:
-    utils.load_checkpoint(model_restoration.module, model_pre_dir)
-
-    if is_main:
-        print('------------------------------------------------------------  ------------------')
-        print("==> Retrain Training with: " + model_pre_dir)
-        print('------------------------------------------------------------------------------')
+if is_main:
+    current_lr = scheduler.get_lr()[0]
+    print('------------------------------------------------------------------------------')
+    print(f"==> exp4: SFStar model, resume from epoch {start_epoch}")
+    print(f"==> Current LR: {current_lr:.6f} (schedule: {start_lr} → {end_lr}, CosineAnnealing)")
+    print(f"==> Total epochs: {num_epochs}, remaining: {num_epochs - start_epoch + 1}")
+    print('------------------------------------------------------------------------------')
 
 ######### Loss ###########
 criterion_char = CharbonnierLoss()
@@ -284,7 +272,7 @@ for epoch in range(start_epoch, num_epochs + 1):
 
     scheduler.step()
 
-    current_lr = optimizer.param_groups[0]['lr']
+    current_lr = scheduler.get_lr()[0]
     if is_main:
         print("------------------------------------------------------------------")
         print("Epoch: {}\tTime: {:.4f}\tLoss: {:.4f}\tLearningRate {:.6f}".format(epoch, time.time() - epoch_start_time,

@@ -1,0 +1,29 @@
+==========================================
+去雨数据集下载脚本（支持断点续传）
+目标目录: /home/guo_shuaile/pyproject/data
+==========================================
+
+------------------------------------------
+处理: Rain200H
+------------------------------------------
+[尝试 1/3] 下载 Rain200H...
+Error:
+
+	HTTPSConnectionPool(host='drive.google.com', port=443): Max retries
+	exceeded with url: /uc?id=1KK8R2bPKgcOX8gMXSuKtCQ (Caused by
+	NewConnectionError('<urllib3.connection.HTTPSConnection object at
+	0x73ab8a6ec2b0>: Failed to establish a new connection: [Errno 101]
+	Network is unreachable'))
+
+To report issues, please visit https://github.com/wkentaro/gdown/issues.
+download_datasets.sh: line 60: 下载失败，${retry < MAX_RETRY:+等待5秒后重试...}: bad substitution
+
+==========================================
+全部完成!
+==========================================
+目录结构：
+total 0
+drwxrwxr-x 3 guo_shuaile guo_shuaile 30 Mar 17 13:49 .
+drwxrwxr-x 6 guo_shuaile guo_shuaile 91 Jun 29 20:19 ..
+drwxrwxr-x 4 guo_shuaile guo_shuaile 43 Mar 17 13:49 Rain200L
+1.1G	/home/guo_shuaile/pyproject/data/Rain200L/
