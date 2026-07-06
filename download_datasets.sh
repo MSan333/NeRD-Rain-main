@@ -2,34 +2,34 @@
 # ============================================================
 # 去雨数据集下载脚本（支持断点续传）
 # 数据来源：NeRD-Rain 官方 README 中的 Google Drive 链接
+# 目标目录：~/pyproject/data/
 # ============================================================
 #
 # 【使用说明】
-# 1. 需要在能访问 Google Drive 的环境（本地电脑/有代理的机器）运行
-# 2. 需要先安装 gdown：pip install gdown
-# 3. 运行方式：
-#      chmod +x download_datasets.sh
-#      bash download_datasets.sh
-# 4. 中断后重新运行即可从断点继续（已下载的不会重复下载）
-# 5. 下载完成后将数据上传到服务器：
-#      scp -r ./data/Rain200H guo_shuaile@<服务器IP>:~/pyproject/data/
-#      scp -r ./data/DID-Data guo_shuaile@<服务器IP>:~/pyproject/data/
-#      scp -r ./data/DDN-Data guo_shuaile@<服务器IP>:~/pyproject/data/
-#    或者打包后上传：
-#      tar czf datasets.tar.gz ./data/Rain200H ./data/DID-Data ./data/DDN-Data
-#      scp datasets.tar.gz guo_shuaile@<服务器IP>:~/pyproject/
-#      # 在服务器上解压：tar xzf datasets.tar.gz
+# 在服务器终端运行：
+#   cd ~/pyproject/NeRD-Rain-main
+#   bash download_datasets.sh
+#
+# 后台运行（断开SSH不中断）：
+#   screen -dmS download_data bash download_datasets.sh
+#   # 查看进度：screen -r download_data
+#   # 退出查看：Ctrl+A 然后 D
+#
+# 断点续传：中断后重新运行即可，已下载/已解压的自动跳过
 #
 # 【数据集大小估计】
 #   Rain200H: ~0.5 GB
-#   DID-Data: ~2.5 GB
+#   DID-Data: ~2.5 GB  
 #   DDN-Data: ~2.0 GB
 #   合计约 5 GB
+#
+# 【注意】需要服务器能访问 Google Drive，如不能访问请设置代理：
+#   export https_proxy=http://代理地址:端口
+#   bash download_datasets.sh
 # ============================================================
 
-# gdown 路径（本地运行时改为 gdown 即可，需 pip install gdown）
-GDOWN=${GDOWN_BIN:-gdown}
-DATA_DIR=${DATA_DIR:-./data}
+GDOWN=/home/guo_shuaile/.conda/envs/nerd/bin/gdown
+DATA_DIR=/home/guo_shuaile/pyproject/data
 MAX_RETRY=3  # 每个文件最多重试次数
 
 cd $DATA_DIR || { echo "无法进入 $DATA_DIR"; exit 1; }
