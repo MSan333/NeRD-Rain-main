@@ -1,32 +1,68 @@
 #!/bin/bash
 # ============================================================
-# 去雨数据集下载脚本（支持断点续传）
-# 数据来源：NeRD-Rain 官方 README 中的 Google Drive 链接
+# 去雨数据集下载脚本
+# 数据来源：NeRD-Rain 官方 README
 # 目标目录：~/pyproject/data/
 # ============================================================
 #
-# 【使用说明】
-# 在服务器终端运行：
-#   cd ~/pyproject/NeRD-Rain-main
-#   bash download_datasets.sh
+# 【方案一】百度网盘下载 + scp 上传（推荐，服务器无法直接下载 Google Drive）
+#
+# Step 1: 在本地电脑下载百度网盘文件：
+#   Rain200H: https://pan.baidu.com/s/1KK8R2bPKgcOX8gMXSuKtCQ  提取码: z9br
+#   DID-Data: https://pan.baidu.com/s/1aPFJExxxTBOzJjngMAOQDA  提取码: 5luo
+#   DDN-Data: https://pan.baidu.com/s/1g_m7RfSUJUtknlWugO1nrw  提取码: ldzo
+#
+# Step 2: 上传到服务器（在本地终端执行）：
+#   scp Rain200H.zip guo_shuaile@<服务器IP>:~/pyproject/data/
+#   scp DID-Data.zip guo_shuaile@<服务器IP>:~/pyproject/data/
+#   scp DDN-Data.zip guo_shuaile@<服务器IP>:~/pyproject/data/
+#
+# Step 3: 在服务器上解压：
+#   cd ~/pyproject/data
+#   unzip Rain200H.zip && rm Rain200H.zip
+#   unzip DID-Data.zip && rm DID-Data.zip
+#   unzip DDN-Data.zip && rm DDN-Data.zip
+#
+# -------------------------------------------------------
+#
+# 【方案二】Google Drive 直接下载（需要服务器能访问 Google，或设置代理）
+#   export https_proxy=http://代理地址:端口
+#   bash download_datasets.sh --run
 #
 # 后台运行（断开SSH不中断）：
-#   screen -dmS download_data bash download_datasets.sh
+#   screen -dmS download_data bash download_datasets.sh --run
 #   # 查看进度：screen -r download_data
 #   # 退出查看：Ctrl+A 然后 D
 #
-# 断点续传：中断后重新运行即可，已下载/已解压的自动跳过
-#
 # 【数据集大小估计】
 #   Rain200H: ~0.5 GB
-#   DID-Data: ~2.5 GB  
+#   DID-Data: ~2.5 GB
 #   DDN-Data: ~2.0 GB
 #   合计约 5 GB
-#
-# 【注意】需要服务器能访问 Google Drive，如不能访问请设置代理：
-#   export https_proxy=http://代理地址:端口
-#   bash download_datasets.sh
 # ============================================================
+
+# 如果没有传 --run 参数，只显示使用说明
+if [ "$1" != "--run" ]; then
+    echo "请先阅读脚本头部注释的使用说明"
+    echo ""
+    echo "推荐方案：百度网盘下载 + scp 上传"
+    echo ""
+    echo "百度网盘链接："
+    echo "  Rain200H: https://pan.baidu.com/s/1KK8R2bPKgcOX8gMXSuKtCQ  提取码: z9br"
+    echo "  DID-Data: https://pan.baidu.com/s/1aPFJExxxTBOzJjngMAOQDA  提取码: 5luo"
+    echo "  DDN-Data: https://pan.baidu.com/s/1g_m7RfSUJUtknlWugO1nrw  提取码: ldzo"
+    echo ""
+    echo "上传命令（本地终端执行）："
+    echo "  scp Rain200H.zip guo_shuaile@<IP>:~/pyproject/data/"
+    echo "  scp DID-Data.zip guo_shuaile@<IP>:~/pyproject/data/"
+    echo "  scp DDN-Data.zip guo_shuaile@<IP>:~/pyproject/data/"
+    echo ""
+    echo "服务器解压："
+    echo "  cd ~/pyproject/data && unzip Rain200H.zip && unzip DID-Data.zip && unzip DDN-Data.zip"
+    echo ""
+    echo "如需使用 Google Drive 直接下载，请运行: bash download_datasets.sh --run"
+    exit 0
+fi
 
 GDOWN=/home/guo_shuaile/.conda/envs/nerd/bin/gdown
 DATA_DIR=/home/guo_shuaile/pyproject/data
@@ -57,7 +93,11 @@ download_with_retry() {
             return 0
         fi
         retry=$((retry+1))
-        echo "下载失败，${retry < MAX_RETRY:+等待5秒后重试...}"
+        if [ $retry -lt $((MAX_RETRY-1)) ]; then
+            echo "下载失败，等待5秒后重试..."
+        else
+            echo "下载失败"
+        fi
         sleep 5
     done
     echo "[错误] ${name} 下载失败，已达最大重试次数"
