@@ -35,3 +35,4 @@ Thumbs.db
 # Temporary scripts
 upload_oss.py
 retry_upload.py
+doc/result/

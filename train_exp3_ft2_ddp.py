@@ -1,20 +1,19 @@
 """
-train_exp3_ft.py — 基于 DDP_4GPU_exp3_lr2e5/model_best.pth 的单卡微调
+train_exp3_ft2_ddp.py — 基于 DDP_4GPU_exp3_lr2e5/model_best.pth 的双卡微调(v2)
 
 修改点：
-  - session: exp3_1GPU_lr2e5_ft（新目录保存）
-  - start_lr: 2e-5
+  - session: DDP_2GPU_exp3_lr1e5_ft2
+  - start_lr: 1e-5
   - end_lr:   1e-6
   - warmup:   关闭
-  - 单卡训练（GPU 2），不用 DDP
-  - num_epochs: 100
-  - Resume: DDP_4GPU_exp3_lr2e5/model_best.pth (epoch 370)
+  - DDP 2卡（GPU 2,3）
+  - num_epochs: 50
+  - Resume: DDP_4GPU_exp3_lr2e5/model_best.pth
 """
 
 import os
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 import torch
 
@@ -24,7 +23,9 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-# 单卡训练，不使用 DDP
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data.distributed import DistributedSampler
 
 import random
 import time
@@ -59,38 +60,47 @@ parser.add_argument('--val_dir', default='../data/Rain200L/test/', type=str, hel
 parser.add_argument('--model_save_dir', default='./ckpt/', type=str, help='Path to save weights')
 parser.add_argument('--pretrain_weights', default='', type=str, help='Path to pretrain-weights')
 parser.add_argument('--mode', default='Deraininig', type=str)
-parser.add_argument('--session', default='exp3_1GPU_lr2e5_ft', type=str, help='session')
+parser.add_argument('--session', default='DDP_2GPU_exp3_lr1e5_ft2', type=str, help='session')
 parser.add_argument('--patch_size', default=256, type=int, help='patch size')
-parser.add_argument('--num_epochs', default=100, type=int, help='num_epochs')
+parser.add_argument('--num_epochs', default=50, type=int, help='num_epochs')
 parser.add_argument('--batch_size', default=1, type=int, help='batch_size per gpu')
 parser.add_argument('--val_epochs', default=1, type=int, help='val_epochs')
+parser.add_argument('--local_rank', default=0, type=int, help='local rank for DDP')
+parser.add_argument('--local-rank', default=0, type=int, help='local rank for DDP (torchrun compat)')
 parser.add_argument('--hafl_warmup_epochs', default=50, type=int, help='HAFL loss warmup epochs (linear ramp-up)')
 args = parser.parse_args()
 
-######### Single GPU Init ###########
-torch.cuda.set_device(0)
-is_main = True
+######### DDP Init ###########
+dist.init_process_group(backend='nccl')
+local_rank = int(os.environ.get('LOCAL_RANK', args.local_rank))
+torch.cuda.set_device(local_rank)
+rank = dist.get_rank()
+world_size = dist.get_world_size()
+is_main = (rank == 0)
 
-print(f"[Single GPU] 使用 GPU 2, batch_size={args.batch_size}")
+if is_main:
+    print(f"[DDP] world_size={world_size}, rank={rank}, local_rank={local_rank}")
+    print(f"[DDP] 每张卡 batch_size={args.batch_size}, 总 batch_size={args.batch_size * world_size}")
 
-######### SwanLab Init ###########
-try:
+######### SwanLab Init (rank 0 only) ###########
+if is_main:
     swanlab.login(api_key="o4MGQAOSX8rGztH69Jj5P")
     swanlab.init(
         project="NeRD-Rain",
-        experiment_name="exp3_1GPU_lr2e5_ft",
+        experiment_name="DDP_2GPU_exp3_lr1e5_ft2",
         config={
             **vars(args),
-            "start_lr": 2e-5,
+            "start_lr": 1e-5,
             "end_lr": 1e-6,
             "warmup_epochs": 0,
             "hafl_warmup_epochs": args.hafl_warmup_epochs,
             "optimizer": "Adam",
+            "betas": (0.9, 0.999),
+            "eps": 1e-8,
+            "ddp_world_size": world_size,
             "resume_from": "DDP_4GPU_exp3_lr2e5/model_best.pth",
         },
     )
-except:
-    print("SwanLab init failed, continuing without it")
 
 mode = args.mode
 session = args.session
@@ -107,8 +117,8 @@ num_epochs = args.num_epochs
 batch_size = args.batch_size
 val_epochs = args.val_epochs
 
-# 微调: 5e-6 → 1e-7（前一阶段 2e-5 已收敛，再降一个量级微调）
-start_lr = 2e-5
+# 降 LR 续训: 1e-4 → 1e-6（原 4e-4 → 4e-6）
+start_lr = 1e-5
 end_lr = 1e-6
 
 ######### Model ###########
@@ -117,21 +127,25 @@ model_restoration = myNet()
 if is_main:
     get_parameter_number(model_restoration)
 
-model_restoration = model_restoration.cuda()
+model_restoration = model_restoration.cuda(local_rank)
+model_restoration = DDP(model_restoration, device_ids=[local_rank], find_unused_parameters=True)
 
 ######### Resume（从 DDP_4GPU_exp3_lr2e5 的 best checkpoint 加载） ###########
+RESUME = True
 RESUME_CKPT_PATH = os.path.join(args.model_save_dir, mode, 'models', 'DDP_4GPU_exp3_lr2e5', 'model_best.pth')
 
-# 仅加载模型权重（不加载 optimizer state，使用全新低 LR）
-utils.load_checkpoint(model_restoration, RESUME_CKPT_PATH)
-# 从 epoch 1 开始（微调阶段独立计数）
-start_epoch = 1
+if RESUME:
+    # 仅加载模型权重（不加载 optimizer state，使用全新低 LR）
+    utils.load_checkpoint(model_restoration.module, RESUME_CKPT_PATH)
+    # 微调阶段从 epoch 1 开始独立计数
+    start_epoch = 1
 
-print('------------------------------------------------------------------------------')
-print(f"==> Resume from: {RESUME_CKPT_PATH}")
-print(f"==> Fine-tune for {num_epochs} epochs")
-print(f"==> LR: {start_lr} → {end_lr} (CosineAnnealing, no warmup)")
-print('------------------------------------------------------------------------------')
+    if is_main:
+        print('------------------------------------------------------------------------------')
+        print(f"==> Resume from: {RESUME_CKPT_PATH}")
+        print(f"==> Fine-tune for {num_epochs} epochs")
+        print(f"==> LR: {start_lr} → {end_lr} (CosineAnnealing, no warmup)")
+        print('------------------------------------------------------------------------------')
 
 # 创建 optimizer（使用新的低学习率，不恢复旧的 optimizer state）
 optimizer = optim.Adam(model_restoration.parameters(), lr=start_lr, betas=(0.9, 0.999), eps=1e-8)
@@ -160,7 +174,8 @@ criterion_hafl = HierarchicalAdaptiveFreqLoss()  # 创新点3: HAFL损失
 
 ######### DataLoaders ###########
 train_dataset = get_training_data(train_dir, {'patch_size': patch_size})
-train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True,
+train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True)
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, sampler=train_sampler,
                           num_workers=4, drop_last=False, pin_memory=True)
 
 val_dataset = get_validation_data(val_dir, {'patch_size': patch_size})
@@ -186,6 +201,9 @@ for epoch in range(start_epoch, num_epochs + 1):
     epoch_l1_loss = 0
     epoch_hafl_loss = 0
     train_id = 1
+
+    # DDP: 每个epoch设置sampler的epoch以保证不同的shuffle
+    train_sampler.set_epoch(epoch)
 
     model_restoration.train()
     for i, data in enumerate(tqdm(train_loader, disable=not is_main), 0):
@@ -256,7 +274,7 @@ for epoch in range(start_epoch, num_epochs + 1):
                 best_psnr = psnr_val_rgb
                 best_epoch = epoch
                 torch.save({'epoch': epoch,
-                            'state_dict': model_restoration.state_dict(),
+                            'state_dict': model_restoration.module.state_dict(),
                             'optimizer': optimizer.state_dict()
                             }, os.path.join(model_dir, "model_best.pth"))
 
@@ -275,12 +293,12 @@ for epoch in range(start_epoch, num_epochs + 1):
         swanlab.log({"lr": current_lr, "epoch_time": time.time() - epoch_start_time, "epoch": epoch}, step=epoch)
 
         torch.save({'epoch': epoch,
-                    'state_dict': model_restoration.state_dict(),
+                    'state_dict': model_restoration.module.state_dict(),
                     'optimizer': optimizer.state_dict()
                     }, os.path.join(model_dir, "model_latest.pth"))
 
-writer.close()
-try:
+if is_main:
+    writer.close()
     swanlab.finish()
-except:
-    pass
+
+dist.destroy_process_group()
