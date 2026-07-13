@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>★HAFL - Hierarchical Adaptive Frequency Loss</title>
+<style>
+body { margin: 0; padding: 20px; background: #fff; font-family: Arial, Helvetica, sans-serif; }
+</style>
+</head>
+<body>
+<svg width="900" height="550" xmlns="http://www.w3.org/2000/svg">
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#333">
+    ★ HAFL: Hierarchical Adaptive Frequency Loss
+  </text>
+  <rect x="20" y="10" width="860" height="25" rx="4" fill="none" stroke="#FF5722" stroke-width="1.5" stroke-dasharray="6,3"/>
+
+  <!-- ===== 上半部分：频谱三子带划分 ===== -->
+  <text x="450" y="65" text-anchor="middle" font-size="13" font-weight="bold" fill="#555">频谱三子带划分示意图</text>
+
+  <!-- 频率条带 -->
+  <!-- 低频 [0, 0.25] 蓝色 -->
+  <rect x="100" y="80" width="175" height="50" rx="4" fill="#2196F3" opacity="0.85"/>
+  <text x="187" y="110" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">Low Frequency</text>
+  <text x="187" y="125" text-anchor="middle" font-size="11" fill="#fff">[0, 0.25]</text>
+
+  <!-- 中频 [0.25, 0.75] 绿色 -->
+  <rect x="275" y="80" width="350" height="50" rx="0" fill="#4CAF50" opacity="0.85"/>
+  <text x="450" y="110" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">Mid Frequency</text>
+  <text x="450" y="125" text-anchor="middle" font-size="11" fill="#fff">[0.25, 0.75]</text>
+
+  <!-- 高频 [0.75, 1.0] 红色 -->
+  <rect x="625" y="80" width="175" height="50" rx="4" fill="#F44336" opacity="0.85"/>
+  <text x="712" y="110" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">High Frequency</text>
+  <text x="712" y="125" text-anchor="middle" font-size="11" fill="#fff">[0.75, 1.0]</text>
+
+  <!-- 频率轴标注 -->
+  <text x="100" y="148" text-anchor="middle" font-size="10" fill="#666">0</text>
+  <text x="275" y="148" text-anchor="middle" font-size="10" fill="#666">0.25</text>
+  <text x="625" y="148" text-anchor="middle" font-size="10" fill="#666">0.75</text>
+  <text x="800" y="148" text-anchor="middle" font-size="10" fill="#666">1.0</text>
+  <text x="450" y="165" text-anchor="middle" font-size="11" fill="#888">归一化频率 →</text>
+
+  <!-- 权重标注 -->
+  <text x="187" y="178" text-anchor="middle" font-size="11" fill="#1565C0" font-weight="bold">w_low = 0.8</text>
+  <text x="450" y="178" text-anchor="middle" font-size="11" fill="#2E7D32" font-weight="bold">w_mid → 0.5</text>
+  <text x="712" y="178" text-anchor="middle" font-size="11" fill="#C62828" font-weight="bold">w_high → 0.3</text>
+
+  <!-- ===== 下半部分：课程学习权重变化折线图 ===== -->
+  <text x="450" y="210" text-anchor="middle" font-size="13" font-weight="bold" fill="#555">课程学习权重调度曲线</text>
+
+  <!-- 图表区域 -->
+  <!-- 背景分区 -->
+  <!-- Phase 1: t=0→1/3 -->
+  <rect x="130" y="225" width="210" height="230" fill="#E3F2FD" opacity="0.4"/>
+  <!-- Phase 2: t=1/3→2/3 -->
+  <rect x="340" y="225" width="210" height="230" fill="#E8F5E9" opacity="0.4"/>
+  <!-- Phase 3: t=2/3→1 -->
+  <rect x="550" y="225" width="210" height="230" fill="#FFEBEE" opacity="0.4"/>
+
+  <!-- 坐标轴 -->
+  <line x1="130" y1="455" x2="770" y2="455" stroke="#333" stroke-width="1.5"/>
+  <line x1="130" y1="225" x2="130" y2="455" stroke="#333" stroke-width="1.5"/>
+
+  <!-- Y轴刻度 -->
+  <text x="120" y="459" text-anchor="end" font-size="10" fill="#666">0</text>
+  <line x1="125" y1="455" x2="130" y2="455" stroke="#333" stroke-width="1"/>
+  <text x="120" y="409" text-anchor="end" font-size="10" fill="#666">0.2</text>
+  <line x1="125" y1="409" x2="760" y2="409" stroke="#ddd" stroke-width="0.5"/>
+  <text x="120" y="363" text-anchor="end" font-size="10" fill="#666">0.4</text>
+  <line x1="125" y1="363" x2="760" y2="363" stroke="#ddd" stroke-width="0.5"/>
+  <text x="120" y="340" text-anchor="end" font-size="10" fill="#666">0.5</text>
+  <line x1="125" y1="340" x2="760" y2="340" stroke="#ddd" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="120" y="317" text-anchor="end" font-size="10" fill="#666">0.6</text>
+  <line x1="125" y1="317" x2="760" y2="317" stroke="#ddd" stroke-width="0.5"/>
+  <text x="120" y="271" text-anchor="end" font-size="10" fill="#666">0.8</text>
+  <line x1="125" y1="271" x2="760" y2="271" stroke="#ddd" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="120" y="225" text-anchor="end" font-size="10" fill="#666">1.0</text>
+  <line x1="125" y1="225" x2="760" y2="225" stroke="#ddd" stroke-width="0.5"/>
+
+  <!-- X轴刻度 -->
+  <text x="130" y="472" text-anchor="middle" font-size="10" fill="#666">0</text>
+  <text x="340" y="472" text-anchor="middle" font-size="10" fill="#666">1/3</text>
+  <text x="550" y="472" text-anchor="middle" font-size="10" fill="#666">2/3</text>
+  <text x="760" y="472" text-anchor="middle" font-size="10" fill="#666">1.0</text>
+  <text x="450" y="488" text-anchor="middle" font-size="11" fill="#888">训练进度 t = epoch / total_epochs</text>
+  <text x="65" y="345" text-anchor="middle" font-size="11" fill="#888" transform="rotate(-90, 65, 345)">损失权重</text>
+
+  <!-- 竖直分界虚线 -->
+  <line x1="340" y1="225" x2="340" y2="455" stroke="#999" stroke-width="1" stroke-dasharray="5,3"/>
+  <line x1="550" y1="225" x2="550" y2="455" stroke="#999" stroke-width="1" stroke-dasharray="5,3"/>
+
+  <!-- 阶段标注 -->
+  <text x="235" y="242" text-anchor="middle" font-size="10" fill="#1565C0" font-weight="bold">Phase 1</text>
+  <text x="235" y="254" text-anchor="middle" font-size="9" fill="#1565C0">低频主导</text>
+  <text x="450" y="242" text-anchor="middle" font-size="10" fill="#2E7D32" font-weight="bold">Phase 2</text>
+  <text x="450" y="254" text-anchor="middle" font-size="9" fill="#2E7D32">中频引入</text>
+  <text x="655" y="242" text-anchor="middle" font-size="10" fill="#C62828" font-weight="bold">Phase 3</text>
+  <text x="655" y="254" text-anchor="middle" font-size="9" fill="#C62828">高频精细化</text>
+
+  <!-- w_low = 0.8 蓝色水平线 -->
+  <line x1="130" y1="271" x2="760" y2="271" stroke="#2196F3" stroke-width="2.5"/>
+  <circle cx="760" cy="271" r="3" fill="#2196F3"/>
+  <text x="775" y="275" font-size="10" fill="#2196F3" font-weight="bold">w_low=0.8</text>
+
+  <!-- w_mid = 0.5 × min(1, 2t) 绿色 -->
+  <!-- t=0→0.5: 从0线性到0.5, t=0.5→1: 恒定0.5 -->
+  <!-- y=455 对应 0, y=225 对应 1.0, 每单位=(455-225)/1.0=230px -->
+  <!-- 0.5 对应 y=455-0.5*230=340 -->
+  <!-- t=0.5 对应 x=130+0.5*630=445 -->
+  <polyline points="130,455 445,340 760,340" fill="none" stroke="#4CAF50" stroke-width="2.5"/>
+  <circle cx="445" cy="340" r="3" fill="#4CAF50"/>
+  <circle cx="760" cy="340" r="3" fill="#4CAF50"/>
+  <text x="775" y="344" font-size="10" fill="#4CAF50" font-weight="bold">w_mid=0.5</text>
+
+  <!-- w_high = 0.3 × min(1, max(0, 3(t-1/3))) 红色 -->
+  <!-- t<1/3: 0, t=1/3→2/3: 线性从0到0.3, t>2/3: 恒定0.3 -->
+  <!-- 0.3 对应 y=455-0.3*230=386 -->
+  <!-- t=1/3: x=340, t=2/3: x=550 -->
+  <polyline points="130,455 340,455 550,386 760,386" fill="none" stroke="#F44336" stroke-width="2.5"/>
+  <circle cx="340" cy="455" r="3" fill="#F44336"/>
+  <circle cx="550" cy="386" r="3" fill="#F44336"/>
+  <circle cx="760" cy="386" r="3" fill="#F44336"/>
+  <text x="775" y="390" font-size="10" fill="#F44336" font-weight="bold">w_high=0.3</text>
+
+  <!-- 总损失公式 -->
+  <rect x="130" y="502" width="640" height="35" rx="6" fill="#FFF3E0" stroke="#FF5722" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="145" y="516" font-size="9" fill="#E65100">★</text>
+  <text x="450" y="524" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">
+    L_total = L_char + 0.01·L_fft + 0.05·L_edge + 0.1·L_l1 + 0.1·L_HAFL
+  </text>
+</svg>
+</body>
+</html>

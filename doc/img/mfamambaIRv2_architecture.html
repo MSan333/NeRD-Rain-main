@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>MFA-MambaIRv2 Architecture</title>
+<style>
+body { margin: 0; padding: 20px; background: #fff; font-family: Arial, Helvetica, sans-serif; }
+svg { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 695" width="1400" height="695">
+<defs>
+  <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+    <polygon points="0 0, 8 3, 0 6" fill="#333"/>
+  </marker>
+  <marker id="arrow-sm" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto">
+    <polygon points="0 0, 6 2.5, 0 5" fill="#333"/>
+  </marker>
+</defs>
+
+<!-- ===== UPPER HALF: Overall Pipeline ===== -->
+<!-- Title -->
+<text x="700" y="22" text-anchor="middle" font-size="11" fill="#666" font-style="italic">MFA-MambaIRv2 Overall Architecture</text>
+
+<!-- LQ Image placeholder -->
+<rect x="20" y="55" width="70" height="55" rx="3" fill="#f0f0f0" stroke="#ccc"/>
+<text x="55" y="85" text-anchor="middle" font-size="9" fill="#666">LQ Image</text>
+
+<!-- Arrow LQ -> Conv -->
+<line x1="90" y1="82" x2="110" y2="82" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Conv 3x3 (first) -->
+<rect x="112" y="60" width="45" height="44" rx="4" fill="#C8E6C9" stroke="#888"/>
+<text x="134" y="79" text-anchor="middle" font-size="9" font-weight="bold">Conv</text>
+<text x="134" y="91" text-anchor="middle" font-size="8">3×3</text>
+
+<!-- Arrow Conv -> Group -->
+<line x1="157" y1="82" x2="175" y2="82" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Attentive State Space Group (dashed box) -->
+<rect x="177" y="32" width="930" height="115" rx="6" fill="none" stroke="#555" stroke-dasharray="6,3" stroke-width="1.5"/>
+<text x="642" y="46" text-anchor="middle" font-size="10" fill="#555" font-weight="bold">Attentive State Space Group × N</text>
+
+<!-- ASSB Block (inner solid box) -->
+<rect x="190" y="52" width="900" height="88" rx="5" fill="none" stroke="#888" stroke-width="1.2"/>
+<text x="640" y="64" text-anchor="middle" font-size="9" fill="#666" font-style="italic">Attentive State Space Block (ASSB)</text>
+
+<!-- ASSB internals -->
+<!-- Norm 1 -->
+<rect x="200" y="72" width="38" height="32" rx="3" fill="#C8E6C9" stroke="#888" stroke-width="0.8"/>
+<text x="219" y="91" text-anchor="middle" font-size="8">Norm</text>
+
+<line x1="238" y1="88" x2="250" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- DSTA Window Attention (innovation ★) -->
+<rect x="252" y="69" width="100" height="38" rx="4" fill="#B8D4E3" stroke="#FF5722" stroke-width="1.5" stroke-dasharray="4,2"/>
+<text x="302" y="85" text-anchor="middle" font-size="8" font-weight="bold" fill="#FF5722">★DSTA Window</text>
+<text x="302" y="96" text-anchor="middle" font-size="8" font-weight="bold" fill="#FF5722">Attention</text>
+
+<line x1="352" y1="88" x2="364" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- ⊕ 1 -->
+<circle cx="375" cy="88" r="9" fill="#fff" stroke="#333" stroke-width="1.2"/>
+<text x="375" y="92" text-anchor="middle" font-size="11" fill="#333">⊕</text>
+
+<line x1="384" y1="88" x2="396" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Norm 2 -->
+<rect x="398" y="72" width="38" height="32" rx="3" fill="#C8E6C9" stroke="#888" stroke-width="0.8"/>
+<text x="417" y="91" text-anchor="middle" font-size="8">Norm</text>
+
+<line x1="436" y1="88" x2="448" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- MLP 1 -->
+<rect x="450" y="72" width="38" height="32" rx="3" fill="#FFF9C4" stroke="#888" stroke-width="0.8"/>
+<text x="469" y="91" text-anchor="middle" font-size="8">MLP</text>
+
+<line x1="488" y1="88" x2="500" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- ⊕ 2 -->
+<circle cx="511" cy="88" r="9" fill="#fff" stroke="#333" stroke-width="1.2"/>
+<text x="511" y="92" text-anchor="middle" font-size="11" fill="#333">⊕</text>
+
+<line x1="520" y1="88" x2="532" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Norm 3 -->
+<rect x="534" y="72" width="38" height="32" rx="3" fill="#C8E6C9" stroke="#888" stroke-width="0.8"/>
+<text x="553" y="91" text-anchor="middle" font-size="8">Norm</text>
+
+<line x1="572" y1="88" x2="584" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- SSDPS_ASSM (innovation ★) -->
+<rect x="586" y="69" width="100" height="38" rx="4" fill="#F5D6A7" stroke="#FF5722" stroke-width="1.5" stroke-dasharray="4,2"/>
+<text x="636" y="85" text-anchor="middle" font-size="8" font-weight="bold" fill="#FF5722">★SSDPS</text>
+<text x="636" y="96" text-anchor="middle" font-size="8" font-weight="bold" fill="#FF5722">ASSM</text>
+
+<line x1="686" y1="88" x2="698" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- ⊕ 3 -->
+<circle cx="709" cy="88" r="9" fill="#fff" stroke="#333" stroke-width="1.2"/>
+<text x="709" y="92" text-anchor="middle" font-size="11" fill="#333">⊕</text>
+
+<line x1="718" y1="88" x2="730" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Norm 4 -->
+<rect x="732" y="72" width="38" height="32" rx="3" fill="#C8E6C9" stroke="#888" stroke-width="0.8"/>
+<text x="751" y="91" text-anchor="middle" font-size="8">Norm</text>
+
+<line x1="770" y1="88" x2="782" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- MLP 2 -->
+<rect x="784" y="72" width="38" height="32" rx="3" fill="#FFF9C4" stroke="#888" stroke-width="0.8"/>
+<text x="803" y="91" text-anchor="middle" font-size="8">MLP</text>
+
+<line x1="822" y1="88" x2="834" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- ⊕ 4 -->
+<circle cx="845" cy="88" r="9" fill="#fff" stroke="#333" stroke-width="1.2"/>
+<text x="845" y="92" text-anchor="middle" font-size="11" fill="#333">⊕</text>
+
+<!-- scale labels -->
+<rect x="360" y="112" width="38" height="16" rx="2" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<text x="379" y="124" text-anchor="middle" font-size="7" fill="#333">scale</text>
+<rect x="694" y="112" width="38" height="16" rx="2" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<text x="713" y="124" text-anchor="middle" font-size="7" fill="#333">scale</text>
+
+<!-- Residual connections (curved lines at bottom) -->
+<path d="M200,104 L200,120 L375,120 L375,97" fill="none" stroke="#888" stroke-width="0.8"/>
+<path d="M534,104 L534,120 L709,120 L709,97" fill="none" stroke="#888" stroke-width="0.8"/>
+
+<!-- MFA module at bottom of ASSB (innovation ★) -->
+<rect x="870" y="69" width="90" height="38" rx="4" fill="#FFE0B2" stroke="#FF5722" stroke-width="1.5" stroke-dasharray="4,2"/>
+<text x="915" y="85" text-anchor="middle" font-size="8" font-weight="bold" fill="#FF5722">★MFA</text>
+<text x="915" y="96" text-anchor="middle" font-size="7" fill="#FF5722">频域增强</text>
+
+<line x1="854" y1="88" x2="870" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- MFA residual path -->
+<rect x="990" y="112" width="38" height="16" rx="2" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<text x="1009" y="124" text-anchor="middle" font-size="7" fill="#333">scale</text>
+<path d="M845,97 L845,128 L990,128" fill="none" stroke="#888" stroke-width="0.8"/>
+
+<!-- Arrow out of ASSB -->
+<line x1="960" y1="88" x2="985" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- ⊕ 5 (MFA residual add) -->
+<circle cx="996" cy="88" r="9" fill="#fff" stroke="#333" stroke-width="1.2"/>
+<text x="996" y="92" text-anchor="middle" font-size="11" fill="#333">⊕</text>
+
+<line x1="1005" y1="88" x2="1020" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Out of group arrow -->
+<line x1="1107" y1="82" x2="1125" y2="82" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Output arrow from group box -->
+<line x1="1020" y1="88" x2="1050" y2="88" stroke="#333"/>
+<line x1="1050" y1="88" x2="1050" y2="50" stroke="#888" stroke-dasharray="3,2"/>
+<text x="1055" y="48" font-size="7" fill="#888">→ next block</text>
+
+<!-- Arrow Group -> Conv -->
+<line x1="1107" y1="88" x2="1125" y2="88" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Conv 3x3 (last) -->
+<rect x="1128" y="60" width="45" height="44" rx="4" fill="#C8E6C9" stroke="#888"/>
+<text x="1150" y="79" text-anchor="middle" font-size="9" font-weight="bold">Conv</text>
+<text x="1150" y="91" text-anchor="middle" font-size="8">3×3</text>
+
+<!-- Arrow Conv -> Reconstruct -->
+<line x1="1173" y1="82" x2="1190" y2="82" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Reconstruct -->
+<rect x="1192" y="55" width="55" height="55" rx="4" fill="#F8BBD0" stroke="#888"/>
+<text x="1219" y="79" text-anchor="middle" font-size="8" font-weight="bold">Recon-</text>
+<text x="1219" y="91" text-anchor="middle" font-size="8" font-weight="bold">struct</text>
+
+<!-- Arrow Reconstruct -> HQ -->
+<line x1="1247" y1="82" x2="1265" y2="82" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- HQ Image placeholder -->
+<rect x="1268" y="55" width="70" height="55" rx="3" fill="#f0f0f0" stroke="#ccc"/>
+<text x="1303" y="85" text-anchor="middle" font-size="9" fill="#666">HQ Image</text>
+
+<!-- ===== LOWER HALF: Three Innovation Sub-modules ===== -->
+<!-- Separator line -->
+<line x1="20" y1="165" x2="1380" y2="165" stroke="#ddd" stroke-width="1"/>
+
+<!-- (a) SSDPS_ASSM -->
+<rect x="15" y="175" width="440" height="430" rx="6" fill="#FFF8E1" stroke="#F5D6A7" stroke-width="1.5"/>
+<text x="235" y="195" text-anchor="middle" font-size="12" font-weight="bold">(a) SSDPS_ASSM（双路径扫描模块）</text>
+
+<!-- Input -->
+<rect x="35" y="215" width="55" height="26" rx="3" fill="#ECEFF1" stroke="#888"/>
+<text x="62" y="232" text-anchor="middle" font-size="9">Input</text>
+
+<line x1="90" y1="228" x2="108" y2="228" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- in_proj + CPE -->
+<rect x="110" y="212" width="70" height="32" rx="3" fill="#E3F2FD" stroke="#888"/>
+<text x="145" y="226" text-anchor="middle" font-size="8">in_proj</text>
+<text x="145" y="237" text-anchor="middle" font-size="8">+ CPE</text>
+
+<line x1="180" y1="244" x2="180" y2="260" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Channel Split -->
+<rect x="145" y="262" width="70" height="22" rx="3" fill="#fff" stroke="#888"/>
+<text x="180" y="277" text-anchor="middle" font-size="8">Channel Split</text>
+
+<!-- Split into two paths -->
+<line x1="155" y1="284" x2="100" y2="305" stroke="#333" marker-end="url(#arrow-sm)"/>
+<line x1="205" y1="284" x2="280" y2="305" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Path A (Semantic - Purple) -->
+<rect x="30" y="307" width="185" height="195" rx="5" fill="#F3E5F5" stroke="#CE93D8" stroke-width="1.5"/>
+<text x="122" y="323" text-anchor="middle" font-size="9" font-weight="bold" fill="#7B1FA2">Path A (语义路径)</text>
+
+<rect x="45" y="332" width="155" height="22" rx="3" fill="#CE93D8" stroke="#7B1FA2" fill-opacity="0.3"/>
+<text x="122" y="347" text-anchor="middle" font-size="8">SGN 语义排序</text>
+
+<line x1="122" y1="354" x2="122" y2="366" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<rect x="45" y="368" width="155" height="22" rx="3" fill="#CE93D8" stroke="#7B1FA2" fill-opacity="0.3"/>
+<text x="122" y="383" text-anchor="middle" font-size="8">ASE 提示注入</text>
+
+<line x1="122" y1="390" x2="122" y2="402" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<rect x="45" y="404" width="155" height="22" rx="3" fill="#CE93D8" stroke="#7B1FA2" fill-opacity="0.3"/>
+<text x="122" y="419" text-anchor="middle" font-size="8">SSM 扫描</text>
+
+<line x1="122" y1="426" x2="122" y2="438" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<rect x="45" y="440" width="155" height="22" rx="3" fill="#CE93D8" stroke="#7B1FA2" fill-opacity="0.3"/>
+<text x="122" y="455" text-anchor="middle" font-size="8">SGN 逆排序</text>
+
+<line x1="122" y1="462" x2="122" y2="474" stroke="#333"/>
+
+<!-- Path B (Spatial - Cyan) -->
+<rect x="230" y="307" width="185" height="195" rx="5" fill="#E0F7FA" stroke="#80DEEA" stroke-width="1.5"/>
+<text x="322" y="323" text-anchor="middle" font-size="9" font-weight="bold" fill="#00838F">Path B (空间路径)</text>
+
+<rect x="245" y="332" width="155" height="22" rx="3" fill="#80DEEA" stroke="#00838F" fill-opacity="0.3"/>
+<text x="322" y="347" text-anchor="middle" font-size="8">保持光栅顺序</text>
+
+<line x1="322" y1="354" x2="322" y2="366" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<rect x="245" y="368" width="155" height="22" rx="3" fill="#80DEEA" stroke="#00838F" fill-opacity="0.3"/>
+<text x="322" y="383" text-anchor="middle" font-size="8">zero_prompt</text>
+
+<line x1="322" y1="390" x2="322" y2="402" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<rect x="245" y="404" width="155" height="22" rx="3" fill="#80DEEA" stroke="#00838F" fill-opacity="0.3"/>
+<text x="322" y="419" text-anchor="middle" font-size="8">SSM 扫描</text>
+
+<line x1="322" y1="426" x2="322" y2="438" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<rect x="245" y="440" width="155" height="22" rx="3" fill="#80DEEA" stroke="#00838F" fill-opacity="0.3"/>
+<text x="322" y="455" text-anchor="middle" font-size="8">直接输出</text>
+
+<line x1="322" y1="462" x2="322" y2="474" stroke="#333"/>
+
+<!-- Concat -->
+<line x1="122" y1="474" x2="122" y2="515" stroke="#333"/>
+<line x1="322" y1="474" x2="322" y2="515" stroke="#333"/>
+<line x1="122" y1="515" x2="322" y2="515" stroke="#333"/>
+<line x1="222" y1="515" x2="222" y2="528" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<rect x="175" y="530" width="95" height="22" rx="3" fill="#ECEFF1" stroke="#888"/>
+<text x="222" y="545" text-anchor="middle" font-size="8">Concat</text>
+
+<line x1="222" y1="552" x2="222" y2="562" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- out_norm -> out_proj -->
+<rect x="175" y="564" width="95" height="22" rx="3" fill="#C8E6C9" stroke="#888"/>
+<text x="222" y="579" text-anchor="middle" font-size="8">out_norm → out_proj</text>
+
+<!-- SSM equation -->
+<text x="235" y="600" text-anchor="middle" font-size="8" fill="#555" font-style="italic">h_i = Ā·h_{i-1} + B̄·x_i</text>
+<text x="235" y="612" text-anchor="middle" font-size="8" fill="#555" font-style="italic">y_i = (C+P)·h_i + D·x_i</text>
+
+<!-- (b) DSTA Window Attention -->
+<rect x="470" y="175" width="440" height="430" rx="6" fill="#E3F2FD" stroke="#B8D4E3" stroke-width="1.5"/>
+<text x="690" y="195" text-anchor="middle" font-size="12" font-weight="bold">(b) DSTA Window Attention</text>
+<text x="690" y="210" text-anchor="middle" font-size="9" fill="#555">（密度驱动选择性Token聚合）</text>
+
+<!-- Q input -->
+<rect x="500" y="225" width="130" height="26" rx="3" fill="#BBDEFB" stroke="#888"/>
+<text x="565" y="242" text-anchor="middle" font-size="9">Q (N=256 tokens)</text>
+
+<line x1="565" y1="251" x2="565" y2="268" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Density MLP -->
+<rect x="500" y="270" width="130" height="30" rx="3" fill="#FFF9C4" stroke="#888"/>
+<text x="565" y="285" text-anchor="middle" font-size="8">密度评估 MLP</text>
+<text x="565" y="296" text-anchor="middle" font-size="7" fill="#666">Density Estimation</text>
+
+<line x1="565" y1="300" x2="565" y2="317" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Top-K Selection -->
+<rect x="490" y="319" width="150" height="30" rx="3" fill="#C8E6C9" stroke="#888"/>
+<text x="565" y="334" text-anchor="middle" font-size="8" font-weight="bold">Top-K 选择</text>
+<text x="565" y="344" text-anchor="middle" font-size="7" fill="#666">keep_ratio=0.5, 保留128个高密度token</text>
+
+<line x1="565" y1="349" x2="565" y2="366" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Split paths for high/low density -->
+<line x1="520" y1="360" x2="520" y2="372" stroke="#333" marker-end="url(#arrow-sm)"/>
+<line x1="650" y1="360" x2="650" y2="372" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- High density tokens -->
+<rect x="490" y="370" width="120" height="30" rx="3" fill="#B8D4E3" stroke="#888"/>
+<text x="550" y="385" text-anchor="middle" font-size="8">高密度tokens</text>
+<text x="550" y="395" text-anchor="middle" font-size="7" fill="#666">128个 (直接保留)</text>
+
+<!-- Low density tokens grouping -->
+<rect x="625" y="370" width="140" height="30" rx="3" fill="#FFE0B2" stroke="#888"/>
+<text x="695" y="385" text-anchor="middle" font-size="8">低密度token空间分组</text>
+<text x="695" y="395" text-anchor="middle" font-size="7" fill="#666">group_size=4, 128→32</text>
+
+<!-- Merge arrows -->
+<line x1="550" y1="400" x2="550" y2="415" stroke="#333"/>
+<line x1="695" y1="400" x2="695" y2="415" stroke="#333"/>
+<line x1="550" y1="415" x2="695" y2="415" stroke="#333"/>
+<line x1="622" y1="415" x2="622" y2="430" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Compressed KV -->
+<rect x="555" y="432" width="135" height="30" rx="3" fill="#F5D6A7" stroke="#888"/>
+<text x="622" y="447" text-anchor="middle" font-size="8" font-weight="bold">压缩 KV: M=160</text>
+<text x="622" y="458" text-anchor="middle" font-size="7" fill="#666">(128 high + 32 grouped)</text>
+
+<line x1="622" y1="462" x2="622" y2="480" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Attention -->
+<rect x="530" y="482" width="185" height="35" rx="4" fill="#B8D4E3" stroke="#1976D2" stroke-width="1.2"/>
+<text x="622" y="498" text-anchor="middle" font-size="9" font-weight="bold">Attention</text>
+<text x="622" y="511" text-anchor="middle" font-size="7">(Q, K_compressed, V_compressed)</text>
+
+<!-- Efficiency note -->
+<rect x="530" y="530" width="185" height="24" rx="3" fill="#FFCDD2" stroke="#E57373"/>
+<text x="622" y="546" text-anchor="middle" font-size="9" font-weight="bold" fill="#C62828">计算量减少 37.5%</text>
+
+<!-- K,V labels -->
+<text x="780" y="460" font-size="8" fill="#666">K: M=160</text>
+<text x="780" y="475" font-size="8" fill="#666">V: M=160</text>
+<text x="780" y="490" font-size="8" fill="#666">Q: N=256</text>
+
+<!-- (c) MFA Module -->
+<rect x="925" y="175" width="455" height="430" rx="6" fill="#FFF3E0" stroke="#FFE0B2" stroke-width="1.5"/>
+<text x="1152" y="195" text-anchor="middle" font-size="12" font-weight="bold">(c) MFA（多尺度频域感知增强）</text>
+
+<!-- Input feature -->
+<rect x="950" y="220" width="80" height="26" rx="3" fill="#ECEFF1" stroke="#888"/>
+<text x="990" y="237" text-anchor="middle" font-size="9">输入特征</text>
+
+<line x1="1030" y1="233" x2="1048" y2="233" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Haar DWT -->
+<rect x="1050" y="218" width="110" height="30" rx="4" fill="#FFE0B2" stroke="#FF8F00" stroke-width="1.2"/>
+<text x="1105" y="234" text-anchor="middle" font-size="8" font-weight="bold">Haar DWT</text>
+<text x="1105" y="244" text-anchor="middle" font-size="7">3级分解</text>
+
+<line x1="1105" y1="248" x2="1105" y2="265" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- DWT Subbands -->
+<rect x="955" y="267" width="85" height="60" rx="3" fill="#FFECB3" stroke="#888"/>
+<text x="997" y="283" text-anchor="middle" font-size="7" font-weight="bold">Level 1</text>
+<text x="997" y="295" text-anchor="middle" font-size="7">[LL,LH,HL,HH]</text>
+<text x="997" y="307" text-anchor="middle" font-size="7">↓ 1×1 Conv</text>
+<text x="997" y="319" text-anchor="middle" font-size="7">↓ Upsample</text>
+
+<rect x="1055" y="267" width="85" height="60" rx="3" fill="#FFECB3" stroke="#888"/>
+<text x="1097" y="283" text-anchor="middle" font-size="7" font-weight="bold">Level 2</text>
+<text x="1097" y="295" text-anchor="middle" font-size="7">[LL,LH,HL,HH]</text>
+<text x="1097" y="307" text-anchor="middle" font-size="7">↓ 1×1 Conv</text>
+<text x="1097" y="319" text-anchor="middle" font-size="7">↓ Upsample</text>
+
+<rect x="1155" y="267" width="85" height="60" rx="3" fill="#FFECB3" stroke="#888"/>
+<text x="1197" y="283" text-anchor="middle" font-size="7" font-weight="bold">Level 3</text>
+<text x="1197" y="295" text-anchor="middle" font-size="7">[LL,LH,HL,HH]</text>
+<text x="1197" y="307" text-anchor="middle" font-size="7">↓ 1×1 Conv</text>
+<text x="1197" y="319" text-anchor="middle" font-size="7">↓ Upsample</text>
+
+<!-- Concat arrows -->
+<line x1="997" y1="327" x2="997" y2="345" stroke="#333"/>
+<line x1="1097" y1="327" x2="1097" y2="345" stroke="#333"/>
+<line x1="1197" y1="327" x2="1197" y2="345" stroke="#333"/>
+<line x1="997" y1="345" x2="1197" y2="345" stroke="#333"/>
+<line x1="1097" y1="345" x2="1097" y2="360" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Concat -->
+<rect x="1055" y="362" width="85" height="22" rx="3" fill="#ECEFF1" stroke="#888"/>
+<text x="1097" y="377" text-anchor="middle" font-size="8">Concat</text>
+
+<line x1="1097" y1="384" x2="1097" y2="400" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- CascadedFSG -->
+<text x="1152" y="412" text-anchor="middle" font-size="9" font-weight="bold" fill="#E65100">CascadedFSG 三级融合门</text>
+
+<!-- Stage 1 -->
+<rect x="955" y="420" width="100" height="35" rx="3" fill="#FFE0B2" stroke="#FF8F00"/>
+<text x="1005" y="436" text-anchor="middle" font-size="8" font-weight="bold">Stage 1</text>
+<text x="1005" y="449" text-anchor="middle" font-size="7">kernel 7×7</text>
+
+<line x1="1055" y1="437" x2="1070" y2="437" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Stage 2 -->
+<rect x="1072" y="420" width="100" height="35" rx="3" fill="#FFE0B2" stroke="#FF8F00"/>
+<text x="1122" y="436" text-anchor="middle" font-size="8" font-weight="bold">Stage 2</text>
+<text x="1122" y="449" text-anchor="middle" font-size="7">kernel 9×9</text>
+
+<line x1="1172" y1="437" x2="1187" y2="437" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Stage 3 -->
+<rect x="1189" y="420" width="100" height="35" rx="3" fill="#FFE0B2" stroke="#FF8F00"/>
+<text x="1239" y="436" text-anchor="middle" font-size="8" font-weight="bold">Stage 3</text>
+<text x="1239" y="449" text-anchor="middle" font-size="7">kernel 11×11</text>
+
+<line x1="1239" y1="455" x2="1239" y2="472" stroke="#333"/>
+<line x1="1005" y1="455" x2="1005" y2="472" stroke="#333"/>
+<line x1="1005" y1="472" x2="1239" y2="472" stroke="#333"/>
+<line x1="1122" y1="472" x2="1122" y2="488" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- FSG output -->
+<rect x="1070" y="490" width="105" height="26" rx="3" fill="#C8E6C9" stroke="#888"/>
+<text x="1122" y="507" text-anchor="middle" font-size="8">FSG_out</text>
+
+<line x1="1122" y1="516" x2="1122" y2="535" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Scale multiply -->
+<rect x="1085" y="537" width="75" height="22" rx="3" fill="#FFF9C4" stroke="#888"/>
+<text x="1122" y="552" text-anchor="middle" font-size="8">× scale</text>
+
+<line x1="1122" y1="559" x2="1122" y2="575" stroke="#333" marker-end="url(#arrow-sm)"/>
+
+<!-- Final Add -->
+<circle cx="1122" cy="586" r="10" fill="#fff" stroke="#333" stroke-width="1.2"/>
+<text x="1122" y="590" text-anchor="middle" font-size="11" fill="#333">⊕</text>
+
+<!-- Residual connection for MFA -->
+<path d="M990,246 L945,246 L945,586 L1112,586" fill="none" stroke="#888" stroke-width="0.8" stroke-dasharray="3,2"/>
+<text x="940" y="420" font-size="7" fill="#888" transform="rotate(-90, 940, 420)">residual (x)</text>
+
+<!-- Output formula -->
+<text x="1152" y="612" text-anchor="middle" font-size="9" fill="#333" font-weight="bold">output = x + scale × FSG_out</text>
+
+<!-- ===== LEGEND BAR ===== -->
+<rect x="15" y="630" width="1365" height="55" rx="4" fill="#FAFAFA" stroke="#ddd"/>
+<text x="30" y="648" font-size="10" font-weight="bold" fill="#333">图例 Legend:</text>
+
+<!-- Legend items -->
+<rect x="30" y="656" width="20" height="14" rx="2" fill="#B8D4E3" stroke="#888" stroke-width="0.5"/>
+<text x="55" y="667" font-size="8">DSTA Attention</text>
+
+<rect x="140" y="656" width="20" height="14" rx="2" fill="#F5D6A7" stroke="#888" stroke-width="0.5"/>
+<text x="165" y="667" font-size="8">SSDPS_ASSM</text>
+
+<rect x="255" y="656" width="20" height="14" rx="2" fill="#C8E6C9" stroke="#888" stroke-width="0.5"/>
+<text x="280" y="667" font-size="8">Norm</text>
+
+<rect x="320" y="656" width="20" height="14" rx="2" fill="#FFF9C4" stroke="#888" stroke-width="0.5"/>
+<text x="345" y="667" font-size="8">MLP</text>
+
+<rect x="385" y="656" width="20" height="14" rx="2" fill="#FFE0B2" stroke="#888" stroke-width="0.5"/>
+<text x="410" y="667" font-size="8">MFA 频域增强</text>
+
+<rect x="510" y="656" width="20" height="14" rx="2" fill="#CE93D8" stroke="#888" stroke-width="0.5" fill-opacity="0.4"/>
+<text x="535" y="667" font-size="8">Path A (语义)</text>
+
+<rect x="620" y="656" width="20" height="14" rx="2" fill="#80DEEA" stroke="#888" stroke-width="0.5" fill-opacity="0.4"/>
+<text x="645" y="667" font-size="8">Path B (空间)</text>
+
+<circle cx="740" cy="663" r="7" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="740" y="667" text-anchor="middle" font-size="9">⊕</text>
+<text x="755" y="667" font-size="8">Element-wise Add</text>
+
+<rect x="860" y="656" width="20" height="14" rx="2" fill="none" stroke="#FF5722" stroke-width="1.5" stroke-dasharray="3,1.5"/>
+<text x="885" y="667" font-size="8" fill="#FF5722">★ 创新模块</text>
+
+<rect x="970" y="656" width="30" height="14" rx="2" fill="none" stroke="#555" stroke-dasharray="4,2"/>
+<text x="1005" y="667" font-size="8">Group (虚线)</text>
+
+<rect x="1080" y="656" width="30" height="14" rx="2" fill="none" stroke="#888" stroke-width="1"/>
+<text x="1115" y="667" font-size="8">Block (实线)</text>
+
+<line x1="1180" y1="663" x2="1210" y2="663" stroke="#333" marker-end="url(#arrow-sm)"/>
+<text x="1215" y="667" font-size="8">数据流</text>
+
+</svg>
+</body>
+</html>

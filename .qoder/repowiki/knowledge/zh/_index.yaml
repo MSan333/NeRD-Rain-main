@@ -1,35 +1,23 @@
 # 知识卡导出索引文件
 schema_version: 1
 locale: zh-CN
-branch: local/exp1
-exported_at: "2026-06-28T15:59:43Z"
+branch: server/exp3
+nodes_managed: true
+exported_at: "2026-07-12T11:40:12Z"
 modules:
     "":
-        dir_name: NeRD-Rain 图像去雨模型训练与评估
-        title: NeRD-Rain 图像去雨模型训练与评估
-        scope:
-            - README.md
-            - requirements.txt
-            - train.py
-            - test.py
-            - test_speed.py
-            - train.sh
-            - img.sh
-            - model.py
-            - model_S.py
-            - layers.py
-            - mlp.py
-            - attssm_modules.py
-            - losses.py
-            - data_RGB.py
-            - dataset_RGB.py
-            - evaluate_python.py
-            - evaluate_y_channel.py
-            - get_parameter_number.py
-            - utils/
-            - Ablations/
-            - evaluations/
-            - pytorch-gradual-warmup-lr/
+        dir_name: NeRD-Rain 多尺度隐式神经去雨模型
+        title: NeRD-Rain 多尺度隐式神经去雨模型
+        scope: []
+        source_files: []
+        children:
+            - 59deb208-a363-47ad-b45a-1f7e882b6cf5
+        depends_on: []
+        related_to: []
+    59deb208-a363-47ad-b45a-1f7e882b6cf5:
+        dir_name: NeRD-Rain 多尺度隐式神经去雨模型
+        title: NeRD-Rain 多尺度隐式神经去雨模型
+        scope: []
         source_files: []
         children: []
         depends_on: []

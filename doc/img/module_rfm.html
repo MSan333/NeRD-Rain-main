@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>★RFM 残差频域模块 (Residual Frequency Module)</title>
+<style>
+body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f5f5f5; font-family: Arial, Helvetica, sans-serif; }
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="680" viewBox="0 0 900 680">
+  <!-- Background -->
+  <rect width="900" height="680" fill="#ffffff" rx="8"/>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#333">★RFM — Residual Frequency Module</text>
+  <text x="450" y="55" text-anchor="middle" font-size="12" fill="#666">残差频域增强模块</text>
+
+  <!-- Innovation dashed border -->
+  <rect x="60" y="65" width="780" height="540" rx="12" fill="none" stroke="#FF5722" stroke-width="2.5" stroke-dasharray="8,4"/>
+  <text x="80" y="82" font-size="11" fill="#FF5722" font-weight="bold">★ Innovation Module</text>
+
+  <!-- Input -->
+  <rect x="350" y="80" width="200" height="36" rx="6" fill="#ECEFF1" stroke="#607D8B" stroke-width="1.5"/>
+  <text x="450" y="103" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">输入特征 x</text>
+  <text x="450" y="115" text-anchor="middle" font-size="9" fill="#666">[B, C, H, W]</text>
+
+  <!-- Arrow: Input to FFT -->
+  <line x1="450" y1="116" x2="450" y2="138" stroke="#333" stroke-width="1.5" marker-end="url(#arrowBlack)"/>
+
+  <!-- 2D-FFT Box -->
+  <rect x="340" y="138" width="220" height="42" rx="8" fill="#E3F2FD" stroke="#1565C0" stroke-width="2"/>
+  <text x="450" y="158" text-anchor="middle" font-size="13" font-weight="bold" fill="#1565C0">2D-FFT</text>
+  <text x="450" y="173" text-anchor="middle" font-size="10" fill="#1565C0">F = FFT(x) = |F|·e^(jφ)</text>
+
+  <!-- Split arrows -->
+  <line x1="400" y1="180" x2="300" y2="210" stroke="#333" stroke-width="1.5" marker-end="url(#arrowBlack)"/>
+  <line x1="500" y1="180" x2="600" y2="210" stroke="#333" stroke-width="1.5" marker-end="url(#arrowBlack)"/>
+
+  <!-- Amplitude Branch (Left - Warm) -->
+  <rect x="200" y="210" width="200" height="240" rx="10" fill="#FFF3E0" stroke="#FF8F00" stroke-width="1.5"/>
+  <text x="300" y="232" text-anchor="middle" font-size="12" font-weight="bold" fill="#E65100">幅度增强分支 |A|</text>
+
+  <!-- Amplitude spectrum box -->
+  <rect x="240" y="242" width="120" height="30" rx="5" fill="#FFE0B2" stroke="#FF8F00" stroke-width="1"/>
+  <text x="300" y="261" text-anchor="middle" font-size="11" font-weight="bold" fill="#E65100">A = |F|</text>
+
+  <!-- Conv1x1 -->
+  <rect x="255" y="282" width="90" height="24" rx="4" fill="#fff" stroke="#FF8F00" stroke-width="1"/>
+  <text x="300" y="298" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">Conv 1×1</text>
+
+  <!-- Arrow -->
+  <line x1="300" y1="306" x2="300" y2="314" stroke="#E65100" stroke-width="1.2" marker-end="url(#arrowOrange)"/>
+
+  <!-- ReLU -->
+  <rect x="265" y="314" width="70" height="22" rx="4" fill="#FFCC80" stroke="#FF8F00" stroke-width="1"/>
+  <text x="300" y="329" text-anchor="middle" font-size="10" font-weight="bold" fill="#E65100">ReLU</text>
+
+  <!-- Arrow -->
+  <line x1="300" y1="336" x2="300" y2="344" stroke="#E65100" stroke-width="1.2" marker-end="url(#arrowOrange)"/>
+
+  <!-- Conv1x1 -->
+  <rect x="255" y="344" width="90" height="24" rx="4" fill="#fff" stroke="#FF8F00" stroke-width="1"/>
+  <text x="300" y="360" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">Conv 1×1</text>
+
+  <!-- Arrow -->
+  <line x1="300" y1="368" x2="300" y2="376" stroke="#E65100" stroke-width="1.2" marker-end="url(#arrowOrange)"/>
+
+  <!-- Sigmoid -->
+  <rect x="260" y="376" width="80" height="22" rx="4" fill="#FFCC80" stroke="#FF8F00" stroke-width="1"/>
+  <text x="300" y="391" text-anchor="middle" font-size="10" font-weight="bold" fill="#E65100">Sigmoid</text>
+
+  <!-- Arrow -->
+  <line x1="300" y1="398" x2="300" y2="414" stroke="#E65100" stroke-width="1.2" marker-end="url(#arrowOrange)"/>
+
+  <!-- A' output -->
+  <rect x="255" y="414" width="90" height="26" rx="5" fill="#FFE0B2" stroke="#FF8F00" stroke-width="1.5"/>
+  <text x="300" y="431" text-anchor="middle" font-size="11" font-weight="bold" fill="#E65100">A' (增强幅度)</text>
+
+  <!-- Phase Branch (Right - Cool) -->
+  <rect x="500" y="210" width="200" height="240" rx="10" fill="#E3F2FD" stroke="#42A5F5" stroke-width="1.5"/>
+  <text x="600" y="232" text-anchor="middle" font-size="12" font-weight="bold" fill="#1565C0">相位直通分支 φ</text>
+
+  <!-- Phase spectrum box -->
+  <rect x="540" y="242" width="120" height="30" rx="5" fill="#BBDEFB" stroke="#42A5F5" stroke-width="1"/>
+  <text x="600" y="261" text-anchor="middle" font-size="11" font-weight="bold" fill="#1565C0">φ = ∠F</text>
+
+  <!-- Phase pass-through dashed line -->
+  <line x1="600" y1="272" x2="600" y2="430" stroke="#42A5F5" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="620" y="350" font-size="10" fill="#1565C0" transform="rotate(90,620,350)">直通 (Identity)</text>
+
+  <!-- Phase output -->
+  <rect x="555" y="414" width="90" height="26" rx="5" fill="#BBDEFB" stroke="#42A5F5" stroke-width="1.5"/>
+  <text x="600" y="431" text-anchor="middle" font-size="11" font-weight="bold" fill="#1565C0">φ (原始相位)</text>
+
+  <!-- Arrows from both branches to reconstruction -->
+  <line x1="300" y1="440" x2="380" y2="468" stroke="#333" stroke-width="1.5" marker-end="url(#arrowBlack)"/>
+  <line x1="600" y1="440" x2="520" y2="468" stroke="#333" stroke-width="1.5" marker-end="url(#arrowBlack)"/>
+
+  <!-- Reconstruction box -->
+  <rect x="330" y="468" width="240" height="36" rx="8" fill="#F3E5F5" stroke="#7B1FA2" stroke-width="1.5"/>
+  <text x="450" y="488" text-anchor="middle" font-size="12" font-weight="bold" fill="#7B1FA2">F' = A' · e^(jφ)</text>
+  <text x="450" y="500" text-anchor="middle" font-size="9" fill="#7B1FA2">重构复数频谱</text>
+
+  <!-- Arrow to iFFT -->
+  <line x1="450" y1="504" x2="450" y2="520" stroke="#333" stroke-width="1.5" marker-end="url(#arrowBlack)"/>
+
+  <!-- 2D-iFFT Box -->
+  <rect x="340" y="520" width="220" height="36" rx="8" fill="#E3F2FD" stroke="#1565C0" stroke-width="2"/>
+  <text x="450" y="541" text-anchor="middle" font-size="13" font-weight="bold" fill="#1565C0">2D-iFFT</text>
+  <text x="450" y="552" text-anchor="middle" font-size="10" fill="#1565C0">x_freq = IFFT(F')</text>
+
+  <!-- Arrow to add node -->
+  <line x1="450" y1="556" x2="450" y2="574" stroke="#333" stroke-width="1.5" marker-end="url(#arrowBlack)"/>
+
+  <!-- Residual Add Node ⊕ -->
+  <circle cx="450" cy="584" r="16" fill="#fff" stroke="#333" stroke-width="2"/>
+  <text x="450" y="590" text-anchor="middle" font-size="16" font-weight="bold" fill="#333">⊕</text>
+
+  <!-- Residual skip connection (gray dashed) -->
+  <path d="M 350 98 L 130 98 L 130 584 L 434 584" fill="none" stroke="#9E9E9E" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#arrowGray)"/>
+  <text x="115" y="340" font-size="10" fill="#9E9E9E" transform="rotate(-90,125,340)">残差连接 (Skip)</text>
+
+  <!-- Output -->
+  <line x1="450" y1="600" x2="450" y2="618" stroke="#333" stroke-width="1.5" marker-end="url(#arrowBlack)"/>
+  <rect x="350" y="618" width="200" height="36" rx="6" fill="#ECEFF1" stroke="#607D8B" stroke-width="1.5"/>
+  <text x="450" y="641" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">输出特征</text>
+  <text x="450" y="653" text-anchor="middle" font-size="9" fill="#666">[B, C, H, W]</text>
+
+  <!-- Formula at bottom -->
+  <text x="450" y="672" text-anchor="middle" font-size="11" fill="#555" font-style="italic">x_out = x + IFFT( σ(W₂ · ReLU(W₁ · |F|)) · e^(jφ) )</text>
+
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrowBlack" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#333"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#9E9E9E"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#E65100"/>
+    </marker>
+  </defs>
+</svg>
+</body>
+</html>

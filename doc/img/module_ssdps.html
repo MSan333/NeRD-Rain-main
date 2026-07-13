@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>★SSDPS: Semantic-Spatial Dual-Path Scanning</title>
+<style>
+body { margin: 0; display: flex; justify-content: center; align-items: flex-start; background: #fff; font-family: Arial, Helvetica, sans-serif; padding: 20px; }
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333"/>
+    </marker>
+    <marker id="arrow-sm" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#333"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="500" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#FF5722">★ SSDPS: Semantic-Spatial Dual-Path Scanning</text>
+  <text x="500" y="46" text-anchor="middle" font-size="11" fill="#555">语义-空间双路径扫描</text>
+
+  <!-- Outer innovation border -->
+  <rect x="30" y="55" width="940" height="590" rx="12" ry="12" fill="none" stroke="#FF5722" stroke-width="2" stroke-dasharray="8,4"/>
+
+  <!-- Input -->
+  <rect x="380" y="65" width="240" height="32" rx="6" fill="#ECEFF1" stroke="#607D8B" stroke-width="1.2"/>
+  <text x="500" y="86" text-anchor="middle" font-size="12" font-weight="bold">输入特征 x [B, HW, C]</text>
+
+  <!-- Arrow down -->
+  <line x1="500" y1="97" x2="500" y2="112" stroke="#333" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+
+  <!-- in_proj + CPE -->
+  <rect x="370" y="114" width="260" height="30" rx="6" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1.2"/>
+  <text x="500" y="134" text-anchor="middle" font-size="11" font-weight="bold">in_proj + CPE → [B, HW, hidden]</text>
+
+  <!-- Arrow down -->
+  <line x1="500" y1="144" x2="500" y2="159" stroke="#333" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+
+  <!-- torch.split -->
+  <rect x="400" y="161" width="200" height="26" rx="6" fill="#FFF9C4" stroke="#F9A825" stroke-width="1.2"/>
+  <text x="500" y="179" text-anchor="middle" font-size="11" font-weight="bold">torch.split (50% / 50%)</text>
+
+  <!-- Split arrows -->
+  <line x1="440" y1="187" x2="260" y2="210" stroke="#333" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+  <line x1="560" y1="187" x2="740" y2="210" stroke="#333" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+
+  <!-- ===== Path A (Semantic) - Left ===== -->
+  <rect x="60" y="210" width="400" height="310" rx="10" fill="#F3E5F5" stroke="#CE93D8" stroke-width="1.5"/>
+  <text x="260" y="230" text-anchor="middle" font-size="12" font-weight="bold" fill="#6A1B9A">Path A — 语义路径 (Semantic)</text>
+
+  <!-- Step 1: route + Gumbel -->
+  <rect x="85" y="240" width="350" height="26" rx="5" fill="#E1BEE7" stroke="#AB47BC" stroke-width="1"/>
+  <text x="260" y="258" text-anchor="middle" font-size="10">① route(x) → cls_token (Gumbel-Softmax)</text>
+
+  <!-- Step 2: SGN sorting -->
+  <rect x="85" y="272" width="350" height="26" rx="5" fill="#E1BEE7" stroke="#AB47BC" stroke-width="1"/>
+  <text x="260" y="290" text-anchor="middle" font-size="10">② SGN 语义排序（按语义相似度重排 token 序列）</text>
+
+  <!-- Step 3: ASE -->
+  <rect x="85" y="304" width="350" height="26" rx="5" fill="#E1BEE7" stroke="#AB47BC" stroke-width="1"/>
+  <text x="260" y="322" text-anchor="middle" font-size="10">③ ASE 提示注入: prompt = Selection_Matrix × B(Pool)</text>
+
+  <!-- Step 4: selectiveScan_sem -->
+  <rect x="85" y="336" width="350" height="44" rx="5" fill="#CE93D8" stroke="#7B1FA2" stroke-width="1.2"/>
+  <text x="260" y="353" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">④ selectiveScan_sem（语义增强 SSM）</text>
+  <text x="260" y="372" text-anchor="middle" font-size="9" font-style="italic" fill="#fff">hᵢ = Ā·hᵢ₋₁ + B̄·xᵢ , yᵢ = (C+P)·hᵢ + D·xᵢ</text>
+
+  <!-- Step 5: inverse sort -->
+  <rect x="85" y="386" width="350" height="26" rx="5" fill="#E1BEE7" stroke="#AB47BC" stroke-width="1"/>
+  <text x="260" y="404" text-anchor="middle" font-size="10">⑤ SGN 逆排序（恢复空间顺序）</text>
+
+  <!-- Path A annotation -->
+  <text x="260" y="435" text-anchor="middle" font-size="10" fill="#6A1B9A" font-weight="bold">语义关联 ← Path A</text>
+  <!-- SSM equation note -->
+  <rect x="90" y="445" width="360" height="22" rx="4" fill="#EDE7F6" stroke="#9575CD" stroke-width="0.8"/>
+  <text x="270" y="460" text-anchor="middle" font-size="9" fill="#4A148C" font-style="italic">P = ASE prompt → 增强 C 矩阵输出投影</text>
+
+  <!-- Arrows within Path A -->
+  <line x1="260" y1="266" x2="260" y2="272" stroke="#333" stroke-width="1" marker-end="url(#arrow-sm)"/>
+  <line x1="260" y1="298" x2="260" y2="304" stroke="#333" stroke-width="1" marker-end="url(#arrow-sm)"/>
+  <line x1="260" y1="330" x2="260" y2="336" stroke="#333" stroke-width="1" marker-end="url(#arrow-sm)"/>
+  <line x1="260" y1="380" x2="260" y2="386" stroke="#333" stroke-width="1" marker-end="url(#arrow-sm)"/>
+
+  <!-- ===== Path B (Spatial) - Right ===== -->
+  <rect x="540" y="210" width="400" height="310" rx="10" fill="#E0F7FA" stroke="#80DEEA" stroke-width="1.5"/>
+  <text x="740" y="230" text-anchor="middle" font-size="12" font-weight="bold" fill="#00695C">Path B — 空间路径 (Spatial)</text>
+
+  <!-- Step 1 -->
+  <rect x="565" y="240" width="350" height="26" rx="5" fill="#B2EBF2" stroke="#00ACC1" stroke-width="1"/>
+  <text x="740" y="258" text-anchor="middle" font-size="10">① 保持光栅顺序（无需排序）</text>
+
+  <!-- Step 2 -->
+  <rect x="565" y="280" width="350" height="26" rx="5" fill="#B2EBF2" stroke="#00ACC1" stroke-width="1"/>
+  <text x="740" y="298" text-anchor="middle" font-size="10">② zero_prompt（零提示，无 ASE）</text>
+
+  <!-- Step 3 -->
+  <rect x="565" y="320" width="350" height="44" rx="5" fill="#00ACC1" stroke="#006064" stroke-width="1.2"/>
+  <text x="740" y="340" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">③ selectiveScan_spa（标准 SSM 扫描）</text>
+  <text x="740" y="357" text-anchor="middle" font-size="9" font-style="italic" fill="#fff">hᵢ = Ā·hᵢ₋₁ + B̄·xᵢ , yᵢ = C·hᵢ + D·xᵢ</text>
+
+  <!-- Step 4 -->
+  <rect x="565" y="375" width="350" height="26" rx="5" fill="#B2EBF2" stroke="#00ACC1" stroke-width="1"/>
+  <text x="740" y="393" text-anchor="middle" font-size="10">④ 直接输出（无需逆排序）</text>
+
+  <!-- Path B annotation -->
+  <text x="740" y="435" text-anchor="middle" font-size="10" fill="#00695C" font-weight="bold">空间连续 ← Path B</text>
+
+  <!-- Arrows within Path B -->
+  <line x1="740" y1="266" x2="740" y2="280" stroke="#333" stroke-width="1" marker-end="url(#arrow-sm)"/>
+  <line x1="740" y1="306" x2="740" y2="320" stroke="#333" stroke-width="1" marker-end="url(#arrow-sm)"/>
+  <line x1="740" y1="364" x2="740" y2="375" stroke="#333" stroke-width="1" marker-end="url(#arrow-sm)"/>
+
+  <!-- Dashed separator between paths -->
+  <line x1="500" y1="215" x2="500" y2="515" stroke="#9E9E9E" stroke-width="1.2" stroke-dasharray="6,4"/>
+
+  <!-- Merge arrows -->
+  <line x1="260" y1="520" x2="420" y2="540" stroke="#333" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+  <line x1="740" y1="520" x2="580" y2="540" stroke="#333" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+
+  <!-- torch.cat -->
+  <rect x="380" y="540" width="240" height="26" rx="6" fill="#FFF9C4" stroke="#F9A825" stroke-width="1.2"/>
+  <text x="500" y="558" text-anchor="middle" font-size="11" font-weight="bold">torch.cat (dim=-1)</text>
+
+  <!-- Arrow down -->
+  <line x1="500" y1="566" x2="500" y2="580" stroke="#333" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+
+  <!-- out_norm + out_proj -->
+  <rect x="350" y="582" width="300" height="30" rx="6" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1.2"/>
+  <text x="500" y="602" text-anchor="middle" font-size="11" font-weight="bold">out_norm + out_proj → [B, HW, C]</text>
+
+  <!-- Safety annotation box -->
+  <rect x="620" y="450" width="300" height="28" rx="5" fill="#E8F5E9" stroke="#43A047" stroke-width="1.2"/>
+  <text x="770" y="469" text-anchor="middle" font-size="10" fill="#2E7D32" font-weight="bold">✓ 不修改 SSM 内部 A/B/C/D 矩阵</text>
+
+  <!-- Bottom comparison diagram -->
+  <rect x="80" y="625" width="380" height="55" rx="6" fill="#F3E5F5" stroke="#CE93D8" stroke-width="1"/>
+  <text x="270" y="643" text-anchor="middle" font-size="10" font-weight="bold" fill="#6A1B9A">SGN 排序后序列</text>
+  <!-- Semantic clusters -->
+  <rect x="120" y="650" width="30" height="16" rx="3" fill="#AB47BC"/><text x="135" y="662" text-anchor="middle" font-size="7" fill="#fff">S1</text>
+  <rect x="155" y="650" width="30" height="16" rx="3" fill="#AB47BC"/><text x="170" y="662" text-anchor="middle" font-size="7" fill="#fff">S1</text>
+  <rect x="190" y="650" width="30" height="16" rx="3" fill="#AB47BC"/><text x="205" y="662" text-anchor="middle" font-size="7" fill="#fff">S1</text>
+  <rect x="230" y="650" width="30" height="16" rx="3" fill="#7B1FA2"/><text x="245" y="662" text-anchor="middle" font-size="7" fill="#fff">S2</text>
+  <rect x="265" y="650" width="30" height="16" rx="3" fill="#7B1FA2"/><text x="280" y="662" text-anchor="middle" font-size="7" fill="#fff">S2</text>
+  <rect x="305" y="650" width="30" height="16" rx="3" fill="#4A148C"/><text x="320" y="662" text-anchor="middle" font-size="7" fill="#fff">S3</text>
+  <rect x="340" y="650" width="30" height="16" rx="3" fill="#4A148C"/><text x="355" y="662" text-anchor="middle" font-size="7" fill="#fff">S3</text>
+  <rect x="375" y="650" width="30" height="16" rx="3" fill="#4A148C"/><text x="390" y="662" text-anchor="middle" font-size="7" fill="#fff">S3</text>
+  <text x="270" y="678" text-anchor="middle" font-size="9" fill="#6A1B9A">语义相似 token 聚集 → 状态传播高效</text>
+
+  <rect x="540" y="625" width="380" height="55" rx="6" fill="#E0F7FA" stroke="#80DEEA" stroke-width="1"/>
+  <text x="730" y="643" text-anchor="middle" font-size="10" font-weight="bold" fill="#00695C">光栅顺序序列</text>
+  <!-- Spatial sequence -->
+  <rect x="580" y="650" width="30" height="16" rx="3" fill="#00ACC1"/><text x="595" y="662" text-anchor="middle" font-size="7" fill="#fff">P1</text>
+  <rect x="615" y="650" width="30" height="16" rx="3" fill="#00838F"/><text x="630" y="662" text-anchor="middle" font-size="7" fill="#fff">P2</text>
+  <rect x="650" y="650" width="30" height="16" rx="3" fill="#00ACC1"/><text x="665" y="662" text-anchor="middle" font-size="7" fill="#fff">P3</text>
+  <rect x="685" y="650" width="30" height="16" rx="3" fill="#00838F"/><text x="700" y="662" text-anchor="middle" font-size="7" fill="#fff">P4</text>
+  <rect x="720" y="650" width="30" height="16" rx="3" fill="#00ACC1"/><text x="735" y="662" text-anchor="middle" font-size="7" fill="#fff">P5</text>
+  <rect x="755" y="650" width="30" height="16" rx="3" fill="#00838F"/><text x="770" y="662" text-anchor="middle" font-size="7" fill="#fff">P6</text>
+  <rect x="790" y="650" width="30" height="16" rx="3" fill="#00ACC1"/><text x="805" y="662" text-anchor="middle" font-size="7" fill="#fff">P7</text>
+  <rect x="825" y="650" width="30" height="16" rx="3" fill="#00838F"/><text x="840" y="662" text-anchor="middle" font-size="7" fill="#fff">P8</text>
+  <text x="730" y="678" text-anchor="middle" font-size="9" fill="#00695C">空间相邻 token 连续 → 局部纹理建模</text>
+
+</svg>
+</body>
+</html>

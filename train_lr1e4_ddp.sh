@@ -4,6 +4,9 @@
 # 从 exp3 best checkpoint 出发，lr=1e-4, cosine 500 epoch
 # 使用方法: screen -S exp3_lr1e4 && bash train_lr1e4_ddp.sh
 
+# screen -S exp3_lr1e4
+# bash train_lr1e4_ddp.sh
+
 # 激活conda环境
 source activate nerd
 
